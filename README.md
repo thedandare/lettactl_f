@@ -14,8 +14,7 @@ A kubectl-style CLI for managing stateful Letta AI agent fleets with declarative
 - 🧠 **Fleet Management** - Deploy and manage multiple related agents together
 - 💬 **Message Operations** - Send messages, stream responses, manage conversations
 - 📦 **Resource Sharing** - Share memory blocks and tools across agents
-- 🔧 **Tool Discovery** - Auto-discover custom Python tools
-- ✅ **Comprehensive Testing** - 62+ tests with full TypeScript coverage
+- 🔧 **Tool And Documentation Discovery** - Auto-discover custom Python tools & all documents to be pushed to letta folders
 
 ## Installation & Setup
 
@@ -69,186 +68,6 @@ Run the comprehensive test suite:
 ```bash
 pnpm test
 # or: npm test
-```
-
-**Test Coverage**: 8 test suites with 62+ tests covering:
-- Agent management and versioning
-- Block management and content hashing  
-- Fleet parsing and YAML configuration
-- Message handling and streaming
-- Utility functions and error handling
-
-### Try the Complete Example
-
-The fastest way to get started is with our complete example:
-
-```bash
-cd example
-lettactl apply -f agents.yml
-```
-
-See the [example README](./example/README.md) for detailed documentation and best practices.
-
-### Your First Agent
-
-Create a file called `agents.yml`:
-
-```yaml
-agents:
-  - name: my-first-agent
-    description: "A helpful AI assistant"
-    llm_config:
-      model: "google_ai/gemini-2.5-pro"
-      context_window: 32000
-    system_prompt:
-      value: "You are a helpful AI assistant."
-    tools:
-      - archival_memory_insert
-      - archival_memory_search
-    memory_blocks:
-      - name: user_preferences
-        description: "Remembers what the user likes"
-        limit: 2000
-        value: "User prefers concise, direct answers."
-    embedding: "letta/letta-free"
-```
-
-Deploy it:
-
-```bash
-lettactl apply -f agents.yml
-```
-
-That's it! Your agent is now running.
-
-## Essential Configuration
-
-### LLM Configuration (Required)
-
-Every agent needs an LLM configuration as the first key:
-
-```yaml
-agents:
-  - name: my-agent
-    llm_config:
-      model: "google_ai/gemini-2.5-pro"     # Required: which model to use
-      context_window: 32000                  # Required: context window size
-```
-
-**Available Models:**
-- `google_ai/gemini-2.5-pro` - Best for complex reasoning
-- `google_ai/gemini-2.5-flash` - Faster, lighter tasks
-- `openai/gpt-4o` - OpenAI's latest model
-- `anthropic/claude-3-5-sonnet` - Anthropic's model
-
-### System Prompts
-
-Define how your agent behaves with system prompts. You have two options:
-
-**Option 1: Inline prompt**
-```yaml
-system_prompt:
-  value: |
-    You are a helpful AI assistant focused on...
-```
-
-**Option 2: File-based prompt (recommended)**
-```yaml
-system_prompt:
-  from_file: "prompts/my-agent-prompt.md"
-```
-
-The system automatically combines your prompt with base Letta instructions for optimal behavior.
-
-### Memory Blocks
-
-Give your agents persistent memory:
-
-```yaml
-memory_blocks:
-  - name: user_preferences
-    description: "What the user likes and dislikes"
-    limit: 2000
-    value: "User prefers short, direct answers."
-```
-
-## Core Features
-
-### Smart Versioning
-
-lettactl automatically handles versioning when content changes:
-
-```yaml
-memory_blocks:
-  - name: user_data
-    description: "User information"
-    value: "Updated content here"
-    # lettactl creates: user_data__v__20241202-a1b2c3d4
-```
-
-**User-defined versions:**
-```yaml
-memory_blocks:
-  - name: campaign_brief
-    version: "summer-2024-launch"  # Your custom tag
-    value: "Summer campaign details..."
-    # Creates: campaign_brief__v__summer-2024-launch
-```
-
-### Diff-Based Updates
-
-When you change system prompts or memory content, lettactl creates new versioned agents instead of overwriting existing ones:
-
-```bash
-# First apply creates: recipe-assistant
-lettactl apply -f agents.yml
-
-# After changing system prompt, creates: recipe-assistant__v__20241202-abc123
-lettactl apply -f agents.yml
-
-# Unchanged agents are left alone
-```
-
-### Shared Resources
-
-Share memory blocks across multiple agents:
-
-```yaml
-shared_blocks:
-  - name: company_guidelines
-    description: "Company-wide AI guidelines"
-    limit: 5000
-    from_file: "shared/guidelines.md"
-
-agents:
-  - name: sales-agent
-    shared_blocks:
-      - company_guidelines
-    # ... rest of config
-    
-  - name: support-agent  
-    shared_blocks:
-      - company_guidelines
-    # ... rest of config
-```
-
-### Custom Tools
-
-Auto-discover Python tools:
-
-```yaml
-tools:
-  - tools/*                    # Auto-discover all .py files
-  - specific_tool_name         # Or reference specific tools
-```
-
-Create `tools/my_tool.py`:
-```python
-from pydantic import BaseModel
-
-def my_custom_tool(query: str) -> str:
-    """Does something amazing with the query"""
-    return f"Processed: {query}"
 ```
 
 ## Commands
@@ -346,6 +165,213 @@ lettactl validate -f agents.yml       # Check config syntax
 ```bash
 lettactl delete agent my-agent --force  # Delete agent
 ```
+
+### Try the Complete Example
+
+The fastest way to get started is with our complete example:
+
+```bash
+cd example
+lettactl apply -f agents.yml
+```
+
+See the [example README](./example/README.md) for detailed documentation and best practices.
+
+### Your First Agent
+
+Create a file called `agents.yml`:
+
+```yaml
+agents:
+  - name: my-first-agent
+    description: "A helpful AI assistant"
+    llm_config:
+      model: "google_ai/gemini-2.5-pro"
+      context_window: 32000
+    system_prompt:
+      value: "You are a helpful AI assistant."
+    tools:
+      - archival_memory_insert
+      - archival_memory_search
+    memory_blocks:
+      - name: user_preferences
+        description: "Remembers what the user likes"
+        limit: 2000
+        value: "User prefers concise, direct answers."
+    embedding: "letta/letta-free"
+```
+
+Deploy it:
+
+```bash
+lettactl apply -f agents.yml
+```
+
+That's it! Your agent is now running.
+
+## Essential Configuration
+
+### LLM Configuration (Required)
+
+Every agent needs an LLM configuration as the first key:
+
+```yaml
+agents:
+  - name: my-agent
+    llm_config:
+      model: "google_ai/gemini-2.5-pro"     # Required: which model to use
+      context_window: 32000                  # Required: context window size
+```
+
+### System Prompts
+
+Define how your agent behaves with system prompts. You have two options:
+
+**Option 1: Inline prompt**
+```yaml
+system_prompt:
+  value: |
+    You are a helpful AI assistant focused on...
+```
+
+**Option 2: File-based prompt (recommended)**
+```yaml
+system_prompt:
+  from_file: "prompts/my-agent-prompt.md"
+```
+
+The system automatically combines your prompt with base Letta instructions for optimal behavior.
+
+### Memory Blocks
+
+Give your agents persistent memory with two content options:
+
+**Option 1: Inline content**
+```yaml
+memory_blocks:
+  - name: user_preferences
+    description: "What the user likes and dislikes"
+    limit: 2000
+    value: "User prefers short, direct answers."
+```
+
+**Option 2: File-based content (recommended for large content)**
+```yaml
+memory_blocks:
+  - name: company_knowledge
+    description: "Company knowledge base"
+    limit: 10000
+    from_file: "memory-blocks/company-info.md"
+```
+
+### File Attachments
+
+Attach documents to your agents with powerful auto-discovery:
+
+**Option 1: Auto-discover all files (recommended for large document sets)**
+```yaml
+folders:
+  - name: documents
+    files:
+      - "files/*"      # All files in files/ directory
+      - "files/**/*"   # All files recursively (subdirectories too)
+```
+
+**Option 2: Specific files and patterns**
+```yaml
+folders:
+  - name: documents
+    files:
+      - "files/manual.pdf"
+      - "files/guidelines.txt"
+      - "files/specs/*.md"  # All markdown in specs/ subdirectory
+```
+
+**Auto-Discovery Features:**
+- `files/*` - Discovers ALL files in the files/ directory automatically
+- `files/**/*` - Recursively discovers files in subdirectories
+- `tools/*` - Auto-discovers all Python tools in tools/ directory
+- No need to manually list every file!
+
+## Core Features
+
+### Smart Versioning
+
+lettactl automatically handles versioning when content changes:
+
+```yaml
+memory_blocks:
+  - name: user_data
+    description: "User information"
+    value: "Updated content here"
+    # lettactl creates: user_data__v__20241202-a1b2c3d4
+```
+
+**User-defined versions:**
+```yaml
+memory_blocks:
+  - name: campaign_brief
+    version: "summer-2024-launch"  # Your custom tag
+    value: "Summer campaign details..."
+    # Creates: campaign_brief__v__summer-2024-launch
+```
+
+### Diff-Based Updates
+
+When you change system prompts or memory content, lettactl creates new versioned agents instead of overwriting existing ones:
+
+```bash
+# First apply creates: recipe-assistant
+lettactl apply -f agents.yml
+
+# After changing system prompt, creates: recipe-assistant__v__20241202-abc123
+lettactl apply -f agents.yml
+
+# Unchanged agents are left alone
+```
+
+### Shared Resources
+
+Share memory blocks across multiple agents:
+
+```yaml
+shared_blocks:
+  - name: company_guidelines
+    description: "Company-wide AI guidelines"
+    limit: 5000
+    from_file: "shared/guidelines.md"
+
+agents:
+  - name: sales-agent
+    shared_blocks:
+      - company_guidelines
+    # ... rest of config
+    
+  - name: support-agent  
+    shared_blocks:
+      - company_guidelines
+    # ... rest of config
+```
+
+### Custom Tools
+
+Auto-discover Python tools:
+
+```yaml
+tools:
+  - tools/*                    # Auto-discover all .py files
+  - specific_tool_name         # Or reference specific tools
+```
+
+Create `tools/my_tool.py`:
+```python
+from pydantic import BaseModel
+
+def my_custom_tool(query: str) -> str:
+    """Does something amazing with the query"""
+    return f"Processed: {query}"
+```
+
 
 ## Complete Configuration Reference
 
