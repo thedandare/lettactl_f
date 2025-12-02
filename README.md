@@ -14,6 +14,7 @@ A kubectl-style CLI for managing stateful Letta AI agent fleets with declarative
 - 🧠 **Fleet Management** - Deploy and manage multiple related agents together
 - 💬 **Message Operations** - Send messages, stream responses, manage conversations
 - 📦 **Resource Sharing** - Share memory blocks and tools across agents
+- 🗑️ **Bulk Operations** - Pattern-based bulk delete with safety previews and shared resource preservation
 - 🔧 **Tool And Documentation Discovery** - Auto-discover custom Python tools & all documents to be pushed to letta folders
 
 ## Installation & Setup
@@ -150,6 +151,40 @@ lettactl compact-messages my-agent
 # Cancel running message processes
 lettactl cancel-messages my-agent --run-ids "run1,run2"
 ```
+
+### Bulk Delete Operations
+```bash
+# Preview agents to be deleted (safe mode)
+lettactl delete-all agents --pattern "test.*"           # Shows what would be deleted
+lettactl delete-all agents                              # Preview all agents
+
+# Bulk delete with pattern matching
+lettactl delete-all agents --pattern "test.*" --force   # Delete all test agents
+lettactl delete-all agents --pattern "dev.*" --force    # Delete all dev agents
+lettactl delete-all agents --pattern "(old|temp).*" --force  # Complex patterns
+
+# Pattern matching by agent ID (useful for cleanup)
+lettactl delete-all agents --pattern ".*abc123.*" --force    # Match partial IDs
+
+# Nuclear option - delete everything (be careful!)
+lettactl delete-all agents --force                      # Deletes ALL agents
+
+# Case-insensitive matching
+lettactl delete-all agents --pattern "PROD.*" --force   # Matches "prod-agent-1", etc.
+```
+
+**What gets deleted:**
+- ✅ Agent-specific memory blocks
+- ✅ Agent-specific folders (if not shared)
+- ✅ Associated conversation history
+- ❌ Shared blocks and folders (preserved)
+
+**Safety Features:**
+- Always shows preview before deletion
+- Requires explicit `--force` confirmation
+- Preserves shared resources used by other agents
+- Pattern matching is case-insensitive
+- Supports complex regex patterns
 
 ### View Resources
 ```bash
@@ -481,6 +516,27 @@ Managing AI agents manually gets messy fast. You end up with:
 lettactl treats your AI agents like infrastructure - versionable, reproducible, and manageable at scale.
 
 ## Advanced Features
+
+### Fleet Cleanup Workflows
+
+Common patterns for managing agent fleets at scale:
+
+```bash
+# Development workflow - clean up test agents after feature work
+lettactl delete-all agents --pattern "feature-.*" --force
+
+# Staging cleanup - remove old staging agents but keep current ones
+lettactl delete-all agents --pattern "staging-old.*" --force
+
+# Version cleanup - remove old versioned agents
+lettactl delete-all agents --pattern ".*__v__2024.*" --force
+
+# Emergency cleanup - remove all temporary/test agents
+lettactl delete-all agents --pattern "(temp|test|debug).*" --force
+
+# CI/CD cleanup - remove agents created by failed builds
+lettactl delete-all agents --pattern ".*-pr-[0-9]+$" --force
+```
 
 ### Environment Management
 
