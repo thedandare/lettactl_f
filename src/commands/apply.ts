@@ -1,6 +1,7 @@
 import { FleetParser } from '../lib/fleet-parser';
 import { LettaClientWrapper } from '../lib/letta-client';
 import { BlockManager } from '../lib/block-manager';
+import { AgentManager } from '../lib/agent-manager';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -36,11 +37,15 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
 
     const client = new LettaClientWrapper();
     const blockManager = new BlockManager(client);
+    const agentManager = new AgentManager(client);
     const createdFolders = new Map<string, string>(); // folder name -> folder id
     
-    // Load existing blocks for versioning
+    // Load existing resources for versioning
     if (verbose) console.log('Loading existing blocks...');
     await blockManager.loadExistingBlocks();
+    
+    if (verbose) console.log('Loading existing agents...');
+    await agentManager.loadExistingAgents();
     
     // Process shared blocks first
     const sharedBlockIds = new Map<string, string>();
@@ -131,6 +136,18 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
       }
       
       try {
+        // Check if agent needs to be created based on system prompt changes
+        const { agentName, shouldCreate, existingAgent } = await agentManager.getOrCreateAgentName(
+          agent.name, 
+          agent.system_prompt.value || '', 
+          verbose
+        );
+
+        if (!shouldCreate && existingAgent) {
+          console.log(`Agent ${agent.name} already exists and is up to date`);
+          continue;
+        }
+
         // Collect all block IDs (shared + agent-specific)
         const blockIds: string[] = [];
         
@@ -173,7 +190,7 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
         }
         
         const createdAgent = await client.createAgent({
-          name: agent.name,
+          name: agentName,
           model: agent.llm_config?.model || "google_ai/gemini-2.5-pro",
           embedding: agent.embedding || "letta/letta-free",
           system: agent.system_prompt.value || '',
@@ -181,6 +198,9 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
           toolIds: toolIds,
           contextWindowLimit: agent.llm_config?.context_window || 64000
         });
+
+        // Update agent registry with new agent
+        agentManager.updateRegistry(agentName, agent.system_prompt.value || '', createdAgent.id);
         
         // Attach folders to agent
         if (agent.folders) {
@@ -194,7 +214,7 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
           }
         }
         
-        console.log(`Agent ${agent.name} created successfully`);
+        console.log(`Agent ${agentName} created successfully`);
         
       } catch (error: any) {
         console.error(`Failed to create agent ${agent.name}:`, error.message);

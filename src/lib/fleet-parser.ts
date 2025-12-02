@@ -63,11 +63,29 @@ export class FleetParser {
   }
 
   private async resolvePromptContent(prompt: any): Promise<void> {
+    // Load base Letta system instructions
+    const basePath = path.resolve(this.basePath, 'config', 'base-letta-system.md');
+    let baseInstructions = '';
+    if (fs.existsSync(basePath)) {
+      baseInstructions = fs.readFileSync(basePath, 'utf8').trim();
+    }
+
+    let userPrompt = '';
+    
     if (prompt.from_file) {
       const filePath = path.resolve(this.basePath, prompt.from_file);
-      prompt.value = fs.readFileSync(filePath, 'utf8');
-    } else if (!prompt.value) {
+      userPrompt = fs.readFileSync(filePath, 'utf8').trim();
+    } else if (prompt.value) {
+      userPrompt = prompt.value.trim();
+    } else {
       throw new Error(`System prompt has no value or from_file specified`);
+    }
+    
+    // Concatenate base instructions with user prompt
+    if (baseInstructions) {
+      prompt.value = baseInstructions + '\n\n' + userPrompt;
+    } else {
+      prompt.value = userPrompt;
     }
   }
 
