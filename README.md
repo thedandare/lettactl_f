@@ -165,7 +165,17 @@ lettactl validate -f agents.yml       # Check config syntax
 
 ### Remove Resources
 ```bash
+# Delete single agent
 lettactl delete agent my-agent --force  # Delete agent
+
+# Bulk delete with pattern matching
+lettactl delete-all agents --pattern "test.*" --force    # Delete all agents matching "test*"
+lettactl delete-all agents --pattern "(dev|staging).*"   # Complex regex patterns
+lettactl delete-all agents --pattern ".*temp.*"          # Match anywhere in name/ID
+lettactl delete-all agents --force                       # Delete ALL agents (dangerous!)
+
+# Preview what will be deleted (without --force)
+lettactl delete-all agents --pattern "test.*"            # Shows preview, asks for --force
 ```
 
 ### Try the Complete Example
