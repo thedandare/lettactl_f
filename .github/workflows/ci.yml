@@ -12,7 +12,7 @@ jobs:
 
     strategy:
       matrix:
-        node-version: [16.x, 18.x, 20.x]
+        node-version: [22.x, 24.x]
 
     steps:
     - name: Checkout code
@@ -22,16 +22,33 @@ jobs:
       uses: actions/setup-node@v4
       with:
         node-version: ${{ matrix.node-version }}
-        cache: 'npm'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 8
+
+    - name: Get pnpm store directory
+      shell: bash
+      run: |
+        echo "STORE_PATH=$(pnpm store path --silent)" >> $GITHUB_ENV
+
+    - name: Setup pnpm cache
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.STORE_PATH }}
+        key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+        restore-keys: |
+          ${{ runner.os }}-pnpm-store-
 
     - name: Install dependencies
-      run: npm install
+      run: pnpm install
 
     - name: Run tests
-      run: npm test
+      run: pnpm test
 
     - name: Build project
-      run: npm run build
+      run: pnpm build
 
     - name: Test CLI functionality
       run: |
@@ -49,15 +66,19 @@ jobs:
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
-        node-version: '18'
-        cache: 'npm'
+        node-version: '24'
+
+    - name: Setup pnpm
+      uses: pnpm/action-setup@v4
+      with:
+        version: 8
 
     - name: Install dependencies
-      run: npm install
+      run: pnpm install
 
     - name: Build and test distribution
       run: |
-        npm run build
+        pnpm build
         # Test that all required files are present
         test -f dist/index.js
         test -f package.json
