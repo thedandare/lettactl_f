@@ -5,6 +5,10 @@ import { applyCommand } from './commands/apply';
 import getCommand from './commands/get';
 import deleteCommand from './commands/delete';
 import describeCommand from './commands/describe';
+import updateCommand from './commands/update';
+import exportCommand from './commands/export';
+import importCommand from './commands/import';
+import createCommand from './commands/create';
 
 // Validate required environment variables
 function validateEnvironment() {
@@ -68,6 +72,65 @@ program
   .argument('<name>', 'agent name')
   .option('--force', 'force deletion without confirmation')
   .action(deleteCommand);
+
+// Create command - create new agents
+program
+  .command('create')
+  .description('Create a new agent')
+  .argument('<resource>', 'resource type (agent)')
+  .argument('<name>', 'agent name')
+  .option('-d, --description <text>', 'agent description')
+  .option('-m, --model <model>', 'LLM model (e.g., google_ai/gemini-2.5-pro)')
+  .option('-s, --system <text>', 'system prompt')
+  .option('-c, --context-window <number>', 'context window size', parseInt)
+  .option('-e, --embedding <embedding>', 'embedding model')
+  .option('-t, --timezone <timezone>', 'agent timezone')
+  .option('--tags <tags>', 'comma-separated tags')
+  .option('--agent-type <type>', 'agent type')
+  .option('--tools <tools>', 'comma-separated tool IDs')
+  .option('--memory-blocks <blocks>', 'comma-separated memory block IDs')
+  .action(createCommand);
+
+// Update command - modify existing agents
+program
+  .command('update')
+  .description('Update an existing agent')
+  .argument('<resource>', 'resource type (agent)')
+  .argument('<name>', 'agent name')
+  .option('-n, --name <name>', 'new agent name')
+  .option('-d, --description <text>', 'new description')
+  .option('-m, --model <model>', 'new LLM model')
+  .option('-s, --system <text>', 'new system prompt')
+  .option('-c, --context-window <number>', 'new context window size', parseInt)
+  .option('-e, --embedding <embedding>', 'new embedding model')
+  .option('-t, --timezone <timezone>', 'new timezone')
+  .option('--tags <tags>', 'comma-separated tags')
+  .action(updateCommand);
+
+// Export command - export agents to files
+program
+  .command('export')
+  .description('Export an agent to a file')
+  .argument('<resource>', 'resource type (agent)')
+  .argument('<name>', 'agent name')
+  .option('-o, --output <file>', 'output filename')
+  .option('--max-steps <number>', 'maximum steps to export', parseInt)
+  .option('--legacy-format', 'use legacy v1 format')
+  .action(exportCommand);
+
+// Import command - import agents from files
+program
+  .command('import')
+  .description('Import an agent from a file')
+  .argument('<file>', 'path to agent export file')
+  .option('-n, --name <name>', 'override agent name')
+  .option('--append-copy', 'append "_copy" suffix to agent name')
+  .option('-e, --embedding <embedding>', 'override embedding model')
+  .option('--override-tools', 'allow overwriting existing tool source code')
+  .option('--strip-messages', 'remove agent messages during import')
+  .option('--secrets <json>', 'secrets JSON string')
+  .option('--env-vars <json>', 'environment variables JSON string')
+  .action(importCommand);
 
 // Validate command - check YAML config
 program

@@ -92,4 +92,15 @@ export class LettaClientWrapper {
   async deleteTool(toolId: string) {
     return await this.client.tools.delete(toolId);
   }
+
+  async exportAgent(agentId: string, options?: { max_steps?: number; use_legacy_format?: boolean }) {
+    return await this.client.agents.exportFile(agentId, options);
+  }
+
+  async importAgent(fileStream: any, options?: any) {
+    return await this.client.agents.importFile({ 
+      file: fileStream,
+      ...options 
+    });
+  }
 }
