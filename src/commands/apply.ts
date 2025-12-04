@@ -4,6 +4,7 @@ import { BlockManager } from '../lib/block-manager';
 import { AgentManager } from '../lib/agent-manager';
 import { DiffEngine } from '../lib/diff-engine';
 import { FileContentTracker } from '../lib/file-content-tracker';
+import { OutputFormatter } from '../lib/output-formatter';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -219,7 +220,7 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
           }
 
           // Apply partial updates to preserve conversation history
-          console.log(`Updating agent ${agent.name} (changed: ${changes.changedComponents.join(', ')})`);
+          console.log(`Updating agent ${agent.name}:`);
           
           const updateOperations = await diffEngine.generateUpdateOperations(
             existingAgent,
@@ -228,6 +229,9 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
             createdFolders,
             verbose
           );
+
+          // Show granular diff information
+          OutputFormatter.showAgentUpdateDiff(updateOperations);
 
           await diffEngine.applyUpdateOperations(
             existingAgent.id,

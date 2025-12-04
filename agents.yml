@@ -53,10 +53,16 @@ agents:
       - name: agency_owner_transcripts
         files:
           - "files/jason-swenk-big-brands-attention-kaitlyn-barclay.md"
-          - "files/jason-swenk-crm-for-agencies-steve-copper.md"
+          - "files/jason-swenk-crm-for-agencies-steve-cooper.md"
           - "files/eric-huberman-hawke-media-ambition-strategy.md"
           - "files/neil-patel-social-media-trends-2026.md"
           - "files/neil-patel-seo-trends-2026-ai-revolution.md"
+      - name: testing_intelligence
+        files:
+          - "files/visual-direction-proven-fixes.md"
+          - "files/customer-profiling-what-works.md"
+          - "files/brand-talent-pipeline-learnings.md"
+          - "files/meta-optimization-process.md"
     llm_config:
       model: "google_ai/gemini-2.5-pro"
       context_window: 32000
