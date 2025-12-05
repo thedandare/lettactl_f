@@ -3,8 +3,9 @@ import { AgentResolver } from '../lib/agent-resolver';
 import { OutputFormatter } from '../lib/output-formatter';
 import { validateResourceType } from '../lib/validators';
 import { withErrorHandling } from '../lib/error-handler';
+import { createSpinner, getSpinnerEnabled } from '../lib/spinner';
 
-async function getCommandImpl(resource: string, name?: string, options?: { output: string }) {
+async function getCommandImpl(resource: string, name?: string, options?: { output: string }, command?: any) {
   validateResourceType(resource, ['agents']);
 
   const client = new LettaClientWrapper();
@@ -16,19 +17,28 @@ async function getCommandImpl(resource: string, name?: string, options?: { outpu
     // TODO: Find agent by name and show details
   } else {
     // List all agents
-    const agents = await resolver.getAllAgents();
+    const spinnerEnabled = getSpinnerEnabled(command);
+    const spinner = createSpinner('Loading agents...', spinnerEnabled).start();
     
-    if (OutputFormatter.handleJsonOutput(agents, options?.output)) {
-      return;
-    }
+    try {
+      const agents = await resolver.getAllAgents();
+      spinner.stop();
+      
+      if (OutputFormatter.handleJsonOutput(agents, options?.output)) {
+        return;
+      }
 
-    if (options?.output === 'yaml') {
-      console.log(OutputFormatter.formatOutput(agents, 'yaml'));
-      return;
-    }
+      if (options?.output === 'yaml') {
+        console.log(OutputFormatter.formatOutput(agents, 'yaml'));
+        return;
+      }
 
-    // Default table output
-    console.log(OutputFormatter.createAgentTable(agents));
+      // Default table output
+      console.log(OutputFormatter.createAgentTable(agents));
+    } catch (error) {
+      spinner.fail('Failed to load agents');
+      throw error;
+    }
   }
 }
 

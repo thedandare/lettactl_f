@@ -2,6 +2,7 @@ import { LettaClientWrapper } from '../lib/letta-client';
 import { AgentResolver } from '../lib/agent-resolver';
 import { normalizeResponse } from '../lib/response-normalizer';
 import { OutputFormatter } from '../lib/output-formatter';
+import { createSpinner, getSpinnerEnabled } from '../lib/spinner';
 
 // Helper function to safely extract content from different message types
 function getMessageContent(message: any): string | null {
@@ -180,9 +181,16 @@ export async function sendMessageCommand(
       console.log('Stream completed');
     } else {
       // Regular synchronous message
-      response = await client.createMessage(agent.id, params);
+      const spinnerEnabled = getSpinnerEnabled(command);
+      const spinner = createSpinner(`Sending message to ${agent.name}...`, spinnerEnabled).start();
       
-      console.log(`Response from ${agent.name}:`);
+      try {
+        response = await client.createMessage(agent.id, params);
+        spinner.succeed(`Response from ${agent.name}:`);
+      } catch (error) {
+        spinner.fail(`Failed to send message to ${agent.name}`);
+        throw error;
+      }
       console.log('---');
       
       if (response.messages && response.messages.length > 0) {

@@ -5,6 +5,15 @@ import { AgentResolver } from '../../src/lib/agent-resolver';
 // Mock dependencies
 jest.mock('../../src/lib/letta-client');
 jest.mock('../../src/lib/agent-resolver');
+jest.mock('ora', () => {
+  return jest.fn(() => ({
+    start: jest.fn(() => ({
+      succeed: jest.fn(),
+      fail: jest.fn(),
+      stop: jest.fn(),
+    })),
+  }));
+});
 
 const MockedLettaClient = LettaClientWrapper as jest.MockedClass<typeof LettaClientWrapper>;
 const MockedAgentResolver = AgentResolver as jest.MockedClass<typeof AgentResolver>;

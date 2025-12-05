@@ -5,6 +5,7 @@ import { AgentManager } from '../lib/agent-manager';
 import { DiffEngine } from '../lib/diff-engine';
 import { FileContentTracker } from '../lib/file-content-tracker';
 import { OutputFormatter } from '../lib/output-formatter';
+import { createSpinner, getSpinnerEnabled } from '../lib/spinner';
 import * as fs from 'fs';
 import * as path from 'path';
 
@@ -222,27 +223,39 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
           // Apply partial updates to preserve conversation history
           console.log(`Updating agent ${agent.name}:`);
           
-          const updateOperations = await diffEngine.generateUpdateOperations(
-            existingAgent,
-            agentConfig,
-            toolNameToId,
-            createdFolders,
-            verbose
-          );
-
-          // Show granular diff information
-          OutputFormatter.showAgentUpdateDiff(updateOperations);
-
-          await diffEngine.applyUpdateOperations(
-            existingAgent.id,
-            updateOperations,
-            verbose
-          );
-
-          // Update registry with new hashes
-          agentManager.updateRegistry(existingAgent.name, agentConfig, existingAgent.id);
+          const spinnerEnabled = getSpinnerEnabled(command);
+          const spinner = createSpinner(`Analyzing changes for ${agent.name}...`, spinnerEnabled).start();
           
-          console.log(`Agent ${agent.name} updated successfully (conversation history preserved)`);
+          try {
+            const updateOperations = await diffEngine.generateUpdateOperations(
+              existingAgent,
+              agentConfig,
+              toolNameToId,
+              createdFolders,
+              verbose
+            );
+
+            spinner.stop();
+            
+            // Show granular diff information
+            OutputFormatter.showAgentUpdateDiff(updateOperations);
+
+            const updateSpinner = createSpinner(`Applying updates to ${agent.name}...`, spinnerEnabled).start();
+            
+            await diffEngine.applyUpdateOperations(
+              existingAgent.id,
+              updateOperations,
+              verbose
+            );
+
+            // Update registry with new hashes
+            agentManager.updateRegistry(existingAgent.name, agentConfig, existingAgent.id);
+            
+            updateSpinner.succeed(`Agent ${agent.name} updated successfully (conversation history preserved)`);
+          } catch (error) {
+            spinner.fail(`Failed to update agent ${agent.name}`);
+            throw error;
+          }
           continue;
         }
 
@@ -272,61 +285,66 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
         }
 
         // Create agent
-        if (verbose) console.log(`  Creating agent...`);
+        const creationSpinner = createSpinner(`Creating agent ${agentName}...`, getSpinnerEnabled(command)).start();
         
-        // Resolve tool names to IDs
-        const toolIds: string[] = [];
-        if (agent.tools) {
-          for (const toolName of agent.tools) {
-            const toolId = toolNameToId.get(toolName);
-            if (toolId) {
-              toolIds.push(toolId);
-            } else {
-              console.warn(`  Tool not found: ${toolName}`);
+        try {
+          // Resolve tool names to IDs
+          const toolIds: string[] = [];
+          if (agent.tools) {
+            for (const toolName of agent.tools) {
+              const toolId = toolNameToId.get(toolName);
+              if (toolId) {
+                toolIds.push(toolId);
+              } else {
+                console.warn(`  Tool not found: ${toolName}`);
+              }
             }
           }
-        }
-        
-        const createdAgent = await client.createAgent({
-          name: agentName,
-          model: agent.llm_config?.model || "google_ai/gemini-2.5-pro",
-          embedding: agent.embedding || "letta/letta-free",
-          system: agent.system_prompt.value || '',
-          blockIds: blockIds,
-          toolIds: toolIds,
-          contextWindowLimit: agent.llm_config?.context_window || 64000
-        });
+          
+          const createdAgent = await client.createAgent({
+            name: agentName,
+            model: agent.llm_config?.model || "google_ai/gemini-2.5-pro",
+            embedding: agent.embedding || "letta/letta-free",
+            system: agent.system_prompt.value || '',
+            blockIds: blockIds,
+            toolIds: toolIds,
+            contextWindowLimit: agent.llm_config?.context_window || 64000
+          });
 
-        // Update agent registry with new agent
-        agentManager.updateRegistry(agentName, {
-          systemPrompt: agent.system_prompt.value || '',
-          tools: agent.tools || [],
-          model: agent.llm_config?.model,
-          embedding: agent.embedding,
-          contextWindow: agent.llm_config?.context_window,
-          memoryBlocks: (agent.memory_blocks || []).map(block => ({
-            name: block.name,
-            description: block.description,
-            limit: block.limit,
-            value: block.value || ''
-          })),
-          folders: agent.folders || [],
-          sharedBlocks: agent.shared_blocks || []
-        }, createdAgent.id);
-        
-        // Attach folders to agent
-        if (agent.folders) {
-          for (const folderConfig of agent.folders) {
-            const folderId = createdFolders.get(folderConfig.name);
-            if (folderId) {
-              if (verbose) console.log(`  Attaching folder ${folderConfig.name}`);
-              await client.attachFolderToAgent(createdAgent.id, folderId);
-              if (verbose) console.log(`  Folder attached`);
+          // Update agent registry with new agent
+          agentManager.updateRegistry(agentName, {
+            systemPrompt: agent.system_prompt.value || '',
+            tools: agent.tools || [],
+            model: agent.llm_config?.model,
+            embedding: agent.embedding,
+            contextWindow: agent.llm_config?.context_window,
+            memoryBlocks: (agent.memory_blocks || []).map(block => ({
+              name: block.name,
+              description: block.description,
+              limit: block.limit,
+              value: block.value || ''
+            })),
+            folders: agent.folders || [],
+            sharedBlocks: agent.shared_blocks || []
+          }, createdAgent.id);
+          
+          // Attach folders to agent
+          if (agent.folders) {
+            for (const folderConfig of agent.folders) {
+              const folderId = createdFolders.get(folderConfig.name);
+              if (folderId) {
+                if (verbose) console.log(`  Attaching folder ${folderConfig.name}`);
+                await client.attachFolderToAgent(createdAgent.id, folderId);
+                if (verbose) console.log(`  Folder attached`);
+              }
             }
           }
+
+          creationSpinner.succeed(`Agent ${agentName} created successfully`);
+        } catch (error) {
+          creationSpinner.fail(`Failed to create agent ${agentName}`);
+          throw error;
         }
-        
-        console.log(`Agent ${agentName} created successfully`);
         
       } catch (error: any) {
         console.error(`Failed to create agent ${agent.name}:`, error.message);

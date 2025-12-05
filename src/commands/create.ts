@@ -1,4 +1,5 @@
 import { LettaClientWrapper } from '../lib/letta-client';
+import { createSpinner, getSpinnerEnabled } from '../lib/spinner';
 
 export default async function createCommand(
   resource: string,
@@ -67,16 +68,23 @@ export default async function createCommand(
     }
 
     // Create the agent
-    const createdAgent = await client.createAgent(createPayload);
+    const spinner = createSpinner(`Creating agent ${name}...`, getSpinnerEnabled(command)).start();
     
-    console.log(`Agent ${name} created successfully`);
-    console.log(`Agent ID: ${createdAgent.id}`);
-    
-    if (verbose) {
-      console.log(`Model: ${createdAgent.model || createPayload.model}`);
-      console.log(`Embedding: ${createdAgent.embedding || createPayload.embedding}`);
-      if (createPayload.description) console.log(`Description: ${createPayload.description}`);
-      if (createPayload.tags) console.log(`Tags: ${createPayload.tags.join(', ')}`);
+    try {
+      const createdAgent = await client.createAgent(createPayload);
+      
+      spinner.succeed(`Agent ${name} created successfully`);
+      console.log(`Agent ID: ${createdAgent.id}`);
+      
+      if (verbose) {
+        console.log(`Model: ${createdAgent.model || createPayload.model}`);
+        console.log(`Embedding: ${createdAgent.embedding || createPayload.embedding}`);
+        if (createPayload.description) console.log(`Description: ${createPayload.description}`);
+        if (createPayload.tags) console.log(`Tags: ${createPayload.tags.join(', ')}`);
+      }
+    } catch (error: any) {
+      spinner.fail(`Failed to create agent ${name}`);
+      throw error;
     }
 
   } catch (error: any) {

@@ -3,19 +3,26 @@ import { AgentResolver } from '../lib/agent-resolver';
 import { OutputFormatter } from '../lib/output-formatter';
 import { validateResourceType, validateRequired } from '../lib/validators';
 import { withErrorHandling } from '../lib/error-handler';
+import { createSpinner, getSpinnerEnabled } from '../lib/spinner';
 
-async function describeCommandImpl(resource: string, name: string, options?: { output?: string }) {
+async function describeCommandImpl(resource: string, name: string, options?: { output?: string }, command?: any) {
   validateResourceType(resource, ['agent', 'agents']);
   validateRequired(name, 'Agent name', 'lettactl describe agent <name>');
 
   const client = new LettaClientWrapper();
   const resolver = new AgentResolver(client);
   
-  // Find agent by name
-  const { agent } = await resolver.findAgentByName(name);
+  const spinnerEnabled = getSpinnerEnabled(command);
+  const spinner = createSpinner(`Loading details for agent ${name}...`, spinnerEnabled).start();
   
-  // Get full agent details
-  const agentDetails = await resolver.getAgentWithDetails(agent.id);
+  try {
+    // Find agent by name
+    const { agent } = await resolver.findAgentByName(name);
+    
+    // Get full agent details
+    const agentDetails = await resolver.getAgentWithDetails(agent.id);
+    
+    spinner.stop();
   
   if (OutputFormatter.handleJsonOutput(agentDetails, options?.output)) {
     return;
@@ -122,7 +129,10 @@ async function describeCommandImpl(resource: string, name: string, options?: { o
     } catch (error) {
       console.log(`Recent Messages: Unable to retrieve messages\n`);
     }
-    
+  } catch (error) {
+    spinner.fail(`Failed to load details for agent ${name}`);
+    throw error;
+  }
 }
 
 export default withErrorHandling('Describe command', describeCommandImpl);

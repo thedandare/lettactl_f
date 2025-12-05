@@ -4,8 +4,9 @@ import { ResourceClassifier } from '../lib/resource-classifier';
 import { validateResourceType, validateRequired } from '../lib/validators';
 import { withErrorHandling } from '../lib/error-handler';
 import { normalizeResponse } from '../lib/response-normalizer';
+import { createSpinner, getSpinnerEnabled } from '../lib/spinner';
 
-async function deleteCommandImpl(resource: string, name: string, options?: { force?: boolean }) {
+async function deleteCommandImpl(resource: string, name: string, options?: { force?: boolean }, command?: any) {
   validateResourceType(resource, ['agent', 'agents']);
   validateRequired(name, 'Agent name', 'lettactl delete agent <name>');
 
@@ -26,12 +27,18 @@ async function deleteCommandImpl(resource: string, name: string, options?: { for
     process.exit(1);
   }
     
-  console.log(`Deleting agent: ${name}...`);
+  const spinnerEnabled = getSpinnerEnabled(command);
+  const spinner = createSpinner(`Deleting agent ${name}...`, spinnerEnabled).start();
   
-  // Use the shared delete logic
-  await deleteAgentWithCleanup(client, resolver, agent, allAgents, true);
-  
-  console.log(`Agent ${name} and associated resources deleted successfully`);
+  try {
+    // Use the shared delete logic
+    await deleteAgentWithCleanup(client, resolver, agent, allAgents, true);
+    
+    spinner.succeed(`Agent ${name} and associated resources deleted successfully`);
+  } catch (error) {
+    spinner.fail(`Failed to delete agent ${name}`);
+    throw error;
+  }
 }
 
 async function deleteAllCommandImpl(resource: string, options?: { 

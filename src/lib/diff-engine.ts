@@ -107,7 +107,14 @@ export class DiffEngine {
     // Analyze basic field changes
     const fieldUpdates: any = {};
     
-    if (currentAgent.system !== desiredConfig.systemPrompt) {
+    // For system prompt comparison, check if they're actually different
+    // Note: desiredConfig.systemPrompt includes base instructions + user prompt
+    // currentAgent.system is the full composed prompt from the server
+    const normalizedCurrent = (currentAgent.system || '').trim();
+    const normalizedDesired = (desiredConfig.systemPrompt || '').trim();
+    
+    if (normalizedCurrent !== normalizedDesired) {
+      if (verbose) console.log(`    System prompt differs - current length: ${normalizedCurrent.length}, desired length: ${normalizedDesired.length}`);
       fieldUpdates.systemPrompt = desiredConfig.systemPrompt;
       operations.operationCount++;
     }

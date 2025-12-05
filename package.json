@@ -1,6 +1,6 @@
 {
   "name": "lettactl",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "description": "kubectl-style CLI for managing Letta AI agent fleets",
   "main": "dist/index.js",
   "bin": {
@@ -47,7 +47,8 @@
     "chalk": "^5.6.2",
     "cli-table3": "^0.6.5",
     "commander": "^14.0.2",
-    "js-yaml": "^4.1.1"
+    "js-yaml": "^4.1.1",
+    "ora": "^9.0.0"
   },
   "devDependencies": {
     "@types/jest": "^30.0.0",

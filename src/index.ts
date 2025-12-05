@@ -42,6 +42,7 @@ program
   .description('kubectl-style CLI for managing Letta AI agent fleets')
   .version('0.1.0')
   .option('-v, --verbose', 'enable verbose output')
+  .option('--no-spinner', 'disable loading spinners')
   .hook('preAction', validateEnvironment);
 
 // Apply command - deploy fleet from YAML
