@@ -31,7 +31,7 @@ export class StorageErrorHandler {
     switch (status) {
       case 400:
         if (provider.toLowerCase() === 'supabase') {
-          errorMessage += `: Bad request - this could be: 1) bucket '${bucket}' doesn't exist, 2) bucket is private (needs RLS policy or make it public), 3) invalid file path '${filePath}', or 4) malformed request. Check bucket exists, permissions, and path.`;
+          errorMessage += `: Bad request - this could be: 1) bucket '${bucket}' doesn't exist, 2) bucket is private (needs RLS policy or make bucket public), 3) wrong RLS policy configuration, 4) invalid file path '${filePath}', 5) malformed request, or 6) something else (Supabase error messages aren't clear here). Check: bucket exists, is public or has proper RLS, and file path is correct.`;
         } else {
           errorMessage += `: Bad request - this could be: 1) bucket '${bucket}' doesn't exist, 2) invalid file path '${filePath}', or 3) malformed request. Check bucket exists and path is correct.`;
         }
