@@ -1,6 +1,7 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
+import { StorageBackendManager, BucketConfig } from './storage-backend';
 
 export interface FileContentMap {
   [filePath: string]: string; // filePath -> content hash
@@ -11,9 +12,11 @@ export interface FileContentMap {
  */
 export class FileContentTracker {
   private basePath: string;
+  private storageManager?: StorageBackendManager;
 
-  constructor(basePath: string) {
+  constructor(basePath: string, storageManager?: StorageBackendManager) {
     this.basePath = basePath;
+    this.storageManager = storageManager;
   }
 
   /**
@@ -65,17 +68,32 @@ export class FileContentTracker {
   /**
    * Generates content hashes for memory block files
    */
-  generateMemoryBlockFileHashes(memoryBlocks: Array<{
+  async generateMemoryBlockFileHashes(memoryBlocks: Array<{
     name: string;
     from_file?: string;
+    from_bucket?: BucketConfig;
     value?: string;
-  }>): FileContentMap {
+  }>): Promise<FileContentMap> {
     const blockHashes: FileContentMap = {};
     
     for (const block of memoryBlocks) {
       if (block.from_file) {
         // Memory block loads content from file
         blockHashes[block.name] = this.generateFileContentHash(block.from_file);
+      } else if (block.from_bucket) {
+        // Memory block loads content from cloud bucket
+        if (!this.storageManager) {
+          console.warn(`Warning: Cannot hash bucket content for block '${block.name}' - no storage manager available`);
+          blockHashes[block.name] = crypto.createHash('sha256').update(`bucket:${block.from_bucket.bucket}/${block.from_bucket.path}`).digest('hex').substring(0, 16);
+        } else {
+          try {
+            const bucketContent = await this.storageManager.readFromBucket(block.from_bucket);
+            blockHashes[block.name] = crypto.createHash('sha256').update(bucketContent).digest('hex').substring(0, 16);
+          } catch (error) {
+            console.warn(`Warning: Could not read bucket content for block '${block.name}':`, (error as Error).message);
+            blockHashes[block.name] = crypto.createHash('sha256').update(`bucket-error:${block.from_bucket.bucket}/${block.from_bucket.path}`).digest('hex').substring(0, 16);
+          }
+        }
       } else if (block.value) {
         // Memory block has inline value - hash it directly
         blockHashes[block.name] = crypto.createHash('sha256').update(block.value).digest('hex').substring(0, 16);

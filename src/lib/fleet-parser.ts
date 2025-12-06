@@ -20,6 +20,10 @@ export class FleetParser {
     });
   }
 
+  get storageBackend(): StorageBackendManager {
+    return this.storageManager;
+  }
+
   async parseFleetConfig(configPath: string): Promise<FleetConfig> {
     if (!fs.existsSync(configPath)) {
       throw new Error(`Configuration file not found: ${configPath}`);

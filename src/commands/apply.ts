@@ -59,7 +59,7 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
     const blockManager = new BlockManager(client);
     const agentManager = new AgentManager(client);
     const diffEngine = new DiffEngine(client, blockManager, parser.basePath);
-    const fileTracker = new FileContentTracker(parser.basePath);
+    const fileTracker = new FileContentTracker(parser.basePath, parser.storageBackend);
     const createdFolders = new Map<string, string>(); // folder name -> folder id
     
     // Load existing resources for versioning
@@ -174,7 +174,7 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
         const toolSourceHashes = fileTracker.generateToolSourceHashes(agent.tools || []);
         
         // Generate memory block file content hashes for change detection
-        const memoryBlockFileHashes = fileTracker.generateMemoryBlockFileHashes(agent.memory_blocks || []);
+        const memoryBlockFileHashes = await fileTracker.generateMemoryBlockFileHashes(agent.memory_blocks || []);
         
         // Check if agent needs to be created based on complete configuration
         const { agentName, shouldCreate, existingAgent } = await agentManager.getOrCreateAgentName(
