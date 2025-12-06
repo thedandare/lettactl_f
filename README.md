@@ -584,14 +584,6 @@ agents:
           path: knowledge/company-info.md
 ```
 
-**File Processing:**
-
-lettactl uses efficient metadata checking for cloud storage files:
-- Reads file metadata (size, etc.) before downloading to detect issues early
-- Warns about very small files (≤40 bytes) that may be effectively empty
-- Warns about very large files (>50MB) that may cause memory or timeout issues  
-- Only downloads file content when metadata checks pass
-
 ### Update Workflows
 
 ```bash
@@ -607,6 +599,24 @@ lettactl apply -f agents.yml
 # Check what was created
 lettactl get agents
 ```
+
+## Implementation Notes
+
+### File Processing
+
+lettactl uses efficient metadata checking for cloud storage files:
+- Reads file metadata (size, etc.) before downloading to detect issues early
+- Warns about very small files (≤40 bytes) that may be effectively empty
+- Warns about very large files (>50MB) that may cause memory or timeout issues  
+- Only downloads file content when metadata checks pass
+
+### Stateless Design
+
+Like kubectl, lettactl is completely stateless:
+- No local configuration files or session data stored
+- Each command is independent and relies on remote APIs (Letta, Supabase)
+- All agent state is managed by the Letta server, not lettactl
+- Consistent behavior across different machines and environments
 
 ### Troubleshooting
 
