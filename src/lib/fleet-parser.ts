@@ -3,6 +3,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import { FleetConfig, FolderConfig } from '../types/fleet-config';
 import { StorageBackendManager, SupabaseStorageBackend, BucketConfig } from './storage-backend';
+import { FleetConfigValidator } from './config-validators';
 
 export interface FleetParserOptions {
   supabaseBackend?: SupabaseStorageBackend;
@@ -26,6 +27,9 @@ export class FleetParser {
 
     const configContent = fs.readFileSync(configPath, 'utf8');
     const config = yaml.load(configContent) as FleetConfig;
+    
+    // Validate configuration before processing
+    FleetConfigValidator.validate(config);
 
     // Auto-expand folders that reference "files" directory
     this.expandFileFolders(config);

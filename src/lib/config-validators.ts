@@ -1,0 +1,317 @@
+/**
+ * Comprehensive YAML configuration validation system
+ * Composition-based validators for different config sections
+ */
+
+import { FleetConfig } from '../types/fleet-config';
+import { BucketConfigValidator } from './bucket-config-validator';
+
+/**
+ * Main orchestrator for fleet configuration validation
+ */
+export class FleetConfigValidator {
+  static validate(config: any): void {
+    this.validateStructure(config);
+    
+    if (config.shared_blocks) {
+      SharedBlockValidator.validate(config.shared_blocks);
+    }
+    
+    if (config.agents) {
+      this.validateAgents(config.agents);
+    }
+  }
+  
+  private static validateStructure(config: any): void {
+    if (!config || typeof config !== 'object') {
+      throw new Error(
+        'Invalid fleet configuration. Expected YAML object with agents array.\n' +
+        'Example:\n' +
+        'agents:\n' +
+        '  - name: my-agent\n' +
+        '    system_prompt:\n' +
+        '      value: "You are helpful"'
+      );
+    }
+    
+    if (!config.agents || !Array.isArray(config.agents)) {
+      throw new Error(
+        'Fleet configuration must have an "agents" array.\n' +
+        'Example:\n' +
+        'agents:\n' +
+        '  - name: my-agent\n' +
+        '    system_prompt:\n' +
+        '      value: "You are helpful"'
+      );
+    }
+    
+    if (config.agents.length === 0) {
+      throw new Error('Fleet configuration must have at least one agent.');
+    }
+  }
+  
+  private static validateAgents(agents: any[]): void {
+    agents.forEach((agent, index) => {
+      try {
+        AgentValidator.validate(agent);
+      } catch (error: any) {
+        throw new Error(`Agent ${index + 1}: ${error.message}`);
+      }
+    });
+  }
+}
+
+/**
+ * Validator for individual agent configurations
+ */
+export class AgentValidator {
+  static validate(agent: any): void {
+    this.validateStructure(agent);
+    this.validateRequiredFields(agent);
+    
+    // Validate sub-components
+    SystemPromptValidator.validate(agent.system_prompt);
+    
+    if (agent.memory_blocks) {
+      MemoryBlockValidator.validate(agent.memory_blocks);
+    }
+    
+    if (agent.tools) {
+      ToolsValidator.validate(agent.tools);
+    }
+    
+    if (agent.folders) {
+      FoldersValidator.validate(agent.folders);
+    }
+    
+    if (agent.llm_config) {
+      LLMConfigValidator.validate(agent.llm_config);
+    }
+  }
+  
+  private static validateStructure(agent: any): void {
+    if (!agent || typeof agent !== 'object') {
+      throw new Error('Agent configuration must be an object.');
+    }
+  }
+  
+  private static validateRequiredFields(agent: any): void {
+    const requiredFields = ['name', 'system_prompt'];
+    const missing = requiredFields.filter(field => !(field in agent));
+    
+    if (missing.length > 0) {
+      throw new Error(
+        `Missing required fields: ${missing.join(', ')}\n` +
+        'Required fields: name, system_prompt\n' +
+        'Example:\n' +
+        '- name: my-agent\n' +
+        '  system_prompt:\n' +
+        '    value: "You are helpful"'
+      );
+    }
+    
+    // Validate name is non-empty string
+    if (!agent.name || typeof agent.name !== 'string' || agent.name.trim() === '') {
+      throw new Error('Agent name must be a non-empty string.');
+    }
+  }
+}
+
+/**
+ * Validator for system prompt configurations
+ */
+export class SystemPromptValidator {
+  static validate(prompt: any): void {
+    if (!prompt || typeof prompt !== 'object') {
+      throw new Error(
+        'System prompt must be an object with value, from_file, or from_bucket.\n' +
+        'Example:\n' +
+        'system_prompt:\n' +
+        '  value: "You are helpful"'
+      );
+    }
+    
+    const hasValue = 'value' in prompt;
+    const hasFile = 'from_file' in prompt;
+    const hasBucket = 'from_bucket' in prompt;
+    
+    if (!hasValue && !hasFile && !hasBucket) {
+      throw new Error(
+        'System prompt must have one of: value, from_file, or from_bucket.\n' +
+        'Examples:\n' +
+        'system_prompt:\n' +
+        '  value: "You are helpful"\n' +
+        '# OR\n' +
+        'system_prompt:\n' +
+        '  from_file: "prompts/my-prompt.md"\n' +
+        '# OR\n' +
+        'system_prompt:\n' +
+        '  from_bucket:\n' +
+        '    provider: supabase\n' +
+        '    bucket: my-bucket\n' +
+        '    path: prompts/my-prompt.md'
+      );
+    }
+    
+    // Only one source allowed
+    const sources = [hasValue, hasFile, hasBucket].filter(Boolean);
+    if (sources.length > 1) {
+      throw new Error('System prompt can only have one of: value, from_file, or from_bucket (not multiple).');
+    }
+    
+    // Validate bucket config if present
+    if (hasBucket) {
+      BucketConfigValidator.validate(prompt.from_bucket);
+    }
+    
+    // Validate string values are non-empty
+    if (hasValue && (!prompt.value || typeof prompt.value !== 'string' || prompt.value.trim() === '')) {
+      throw new Error('System prompt value must be a non-empty string.');
+    }
+    
+    if (hasFile && (!prompt.from_file || typeof prompt.from_file !== 'string' || prompt.from_file.trim() === '')) {
+      throw new Error('System prompt from_file must be a non-empty string.');
+    }
+  }
+}
+
+/**
+ * Validator for memory blocks
+ */
+export class MemoryBlockValidator {
+  static validate(blocks: any): void {
+    if (!Array.isArray(blocks)) {
+      throw new Error('Memory blocks must be an array.');
+    }
+    
+    blocks.forEach((block, index) => {
+      try {
+        this.validateBlock(block);
+      } catch (error: any) {
+        throw new Error(`Memory block ${index + 1}: ${error.message}`);
+      }
+    });
+  }
+  
+  private static validateBlock(block: any): void {
+    if (!block || typeof block !== 'object') {
+      throw new Error('Memory block must be an object.');
+    }
+    
+    // Required fields
+    if (!block.name || typeof block.name !== 'string' || block.name.trim() === '') {
+      throw new Error('Memory block must have a non-empty name.');
+    }
+    
+    // Must have content source
+    const hasValue = 'value' in block;
+    const hasFile = 'from_file' in block;
+    const hasBucket = 'from_bucket' in block;
+    
+    if (!hasValue && !hasFile && !hasBucket) {
+      throw new Error(
+        `Memory block "${block.name}" must have one of: value, from_file, or from_bucket.`
+      );
+    }
+    
+    // Validate bucket config if present
+    if (hasBucket) {
+      BucketConfigValidator.validate(block.from_bucket);
+    }
+  }
+}
+
+/**
+ * Validator for tools configuration
+ */
+export class ToolsValidator {
+  static validate(tools: any): void {
+    if (!Array.isArray(tools)) {
+      throw new Error('Tools must be an array.');
+    }
+    
+    tools.forEach((tool, index) => {
+      if (!tool || typeof tool !== 'string' || tool.trim() === '') {
+        throw new Error(`Tool ${index + 1} must be a non-empty string (tool name).`);
+      }
+    });
+  }
+}
+
+/**
+ * Validator for folders configuration
+ */
+export class FoldersValidator {
+  static validate(folders: any): void {
+    if (!Array.isArray(folders)) {
+      throw new Error('Folders must be an array.');
+    }
+    
+    folders.forEach((folder, index) => {
+      try {
+        this.validateFolder(folder);
+      } catch (error: any) {
+        throw new Error(`Folder ${index + 1}: ${error.message}`);
+      }
+    });
+  }
+  
+  private static validateFolder(folder: any): void {
+    if (!folder || typeof folder !== 'object') {
+      throw new Error('Folder must be an object.');
+    }
+    
+    if (!folder.name || typeof folder.name !== 'string' || folder.name.trim() === '') {
+      throw new Error('Folder must have a non-empty name.');
+    }
+    
+    if (!folder.files || !Array.isArray(folder.files)) {
+      throw new Error(`Folder "${folder.name}" must have a files array.`);
+    }
+    
+    folder.files.forEach((file: any, index: number) => {
+      if (!file || typeof file !== 'string' || file.trim() === '') {
+        throw new Error(`Folder "${folder.name}" file ${index + 1} must be a non-empty string.`);
+      }
+    });
+  }
+}
+
+/**
+ * Validator for shared blocks configuration
+ */
+export class SharedBlockValidator {
+  static validate(blocks: any): void {
+    if (!Array.isArray(blocks)) {
+      throw new Error('Shared blocks must be an array.');
+    }
+    
+    blocks.forEach((block, index) => {
+      try {
+        MemoryBlockValidator['validateBlock'](block); // Reuse memory block validation
+      } catch (error: any) {
+        throw new Error(`Shared block ${index + 1}: ${error.message}`);
+      }
+    });
+  }
+}
+
+/**
+ * Validator for LLM configuration
+ */
+export class LLMConfigValidator {
+  static validate(config: any): void {
+    if (!config || typeof config !== 'object') {
+      throw new Error('LLM config must be an object.');
+    }
+    
+    // Optional but validate if present
+    if (config.model && (typeof config.model !== 'string' || config.model.trim() === '')) {
+      throw new Error('LLM config model must be a non-empty string if specified.');
+    }
+    
+    if (config.context_window && (!Number.isInteger(config.context_window) || config.context_window <= 0)) {
+      throw new Error('LLM config context_window must be a positive integer if specified.');
+    }
+  }
+}
