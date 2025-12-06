@@ -91,8 +91,18 @@ export class StorageErrorHandler {
    * Handle Supabase-specific error patterns
    */
   private static handleSupabaseError(error: any, context: StorageErrorContext): never {
+    // Handle StorageUnknownError with empty originalError (likely auth issue)
+    if (error.__isStorageError && error.name === 'StorageUnknownError' && 
+        (!error.originalError || Object.keys(error.originalError).length === 0)) {
+      throw new Error(
+        `Failed to ${context.operation} ${context.bucket}/${context.filePath} (supabase): ` +
+        'Authentication error. Please check your SUPABASE_ANON_KEY is correct and not expired. ' +
+        'Get a new one from Supabase Dashboard > Settings > API.'
+      );
+    }
+    
     // Handle Supabase StorageError with originalError
-    if (error.__isStorageError && error.originalError) {
+    if (error.__isStorageError && error.originalError && error.originalError.status) {
       return this.handleHttpError(error, context, error.originalError.status);
     }
     
