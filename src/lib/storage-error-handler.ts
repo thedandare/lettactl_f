@@ -166,6 +166,19 @@ export class StorageErrorHandler {
     const { provider, operation, bucket, filePath } = context;
     const resource = bucket && filePath ? `${bucket}/${filePath}` : bucket || filePath || 'resource';
     
+    // Handle SSL/certificate issues common in corporate environments
+    if (error.code === 'UNABLE_TO_VERIFY_LEAF_SIGNATURE' || 
+        error.code === 'CERT_UNTRUSTED' || 
+        error.code === 'SELF_SIGNED_CERT_IN_CHAIN' ||
+        error.message?.includes('certificate') ||
+        error.message?.includes('SSL') ||
+        error.message?.includes('TLS')) {
+      throw new Error(
+        `SSL/Certificate error connecting to ${provider}: ${error.message}. ` +
+        `If you're on a corporate network, try: 1) disconnect/reconnect VPN, 2) check with IT about certificate issues, 3) try from a different network.`
+      );
+    }
+    
     let errorMessage = `${provider} storage error while trying to ${operation} ${resource}`;
     
     if (error.message) {

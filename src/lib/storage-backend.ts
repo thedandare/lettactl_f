@@ -253,18 +253,26 @@ export class SupabaseStorageBackend {
       }
       
       if (!data) {
-        throw new Error(`No data returned when downloading ${bucket}/${filePath}`);
+        StorageErrorHandler.handleProviderError(
+          { message: 'No data returned from download' },
+          { provider: 'supabase', operation: 'download', bucket, filePath }
+        );
       }
       
       return await data.text()
       
     } catch (error: any) {
-      // Re-throw our custom errors, wrap unexpected ones
+      // Re-throw our custom errors, handle unexpected ones through error handler
       if (error.message.includes('Failed to download')) {
         throw error;
       }
       
-      throw new Error(`Supabase storage error for ${bucket}/${filePath}: ${error.message || 'Unknown error'}`);
+      StorageErrorHandler.handleProviderError(error, {
+        provider: 'supabase',
+        operation: 'download', 
+        bucket,
+        filePath
+      });
     }
   }
 
@@ -278,7 +286,12 @@ export class SupabaseStorageBackend {
         })
       
       if (error) {
-        throw new Error(`Failed to list files in ${bucket}/${pathPrefix}: ${error.message}`)
+        StorageErrorHandler.handleProviderError(error, {
+          provider: 'supabase',
+          operation: 'list',
+          bucket,
+          filePath: pathPrefix
+        });
       }
       
       return data?.map((file: any) => 
@@ -286,7 +299,12 @@ export class SupabaseStorageBackend {
       ) || []
       
     } catch (error: any) {
-      throw new Error(`Supabase list error for ${bucket}/${pathPrefix}: ${error.message}`)
+      StorageErrorHandler.handleProviderError(error, {
+        provider: 'supabase',
+        operation: 'list',
+        bucket,
+        filePath: pathPrefix
+      });
     }
   }
 }
