@@ -545,6 +545,45 @@ export LETTA_API_URL=https://api.letta.com
 export LETTA_API_KEY=your_cloud_key  # Required for cloud
 ```
 
+### Supabase Storage Integration
+
+For cloud storage support, lettactl can read agent configuration files from Supabase buckets. More cloud storage options coming soon.
+
+```bash
+# Required environment variables
+export SUPABASE_URL=https://your-project.supabase.co
+export SUPABASE_ANON_KEY=sb_publishable_your_anon_key
+```
+
+**⚠️ Important: Use the ANON key, not the service role key**
+- Go to Supabase Dashboard > Settings > API
+- Copy the "anon public" key (starts with `sb_publishable_...`)
+- Do NOT use the "service role" key for lettactl
+
+**Bucket Configuration:**
+
+Your Supabase bucket must be either:
+1. **Public bucket** (recommended for shared configurations)
+2. **Private bucket with RLS policy** allowing anon key access
+
+**Example with cloud storage:**
+
+```yaml
+agents:
+  - name: cloud-agent
+    system_prompt:
+      from_bucket:
+        provider: supabase
+        bucket: my-configs
+        path: prompts/agent-prompt.md
+    memory_blocks:
+      - name: knowledge_base
+        from_bucket:
+          provider: supabase
+          bucket: my-configs  
+          path: knowledge/company-info.md
+```
+
 ### Update Workflows
 
 ```bash
