@@ -8,3 +8,4 @@ files/
 tools/
 prompts/
 shared/
+.env
