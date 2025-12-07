@@ -16,6 +16,7 @@ import {
   compactMessagesCommand, 
   cancelMessagesCommand 
 } from './commands/messages';
+import { validateCommand } from './commands/validate';
 
 // Validate required environment variables
 function validateEnvironment() {
@@ -154,10 +155,7 @@ program
   .command('validate')
   .description('Validate agent configuration')
   .option('-f, --file <path>', 'agent YAML configuration file', 'agents.yml')
-  .action(async (options) => {
-    console.log('Validate command:', options);
-    // TODO: Implement validate logic
-  });
+  .action(validateCommand);
 
 // Message commands
 // List messages (replaces old logs command)

@@ -51,9 +51,20 @@ export class FleetConfigValidator {
   }
   
   private static validateAgents(agents: any[]): void {
+    // Check for duplicate agent names
+    const agentNames = new Set<string>();
+    
     agents.forEach((agent, index) => {
       try {
         AgentValidator.validate(agent);
+        
+        // Check name uniqueness
+        if (agent.name) {
+          if (agentNames.has(agent.name)) {
+            throw new Error(`Duplicate agent name "${agent.name}". Agent names must be unique.`);
+          }
+          agentNames.add(agent.name);
+        }
       } catch (error: any) {
         throw new Error(`Agent ${index + 1}: ${error.message}`);
       }
@@ -67,6 +78,7 @@ export class FleetConfigValidator {
 export class AgentValidator {
   static validate(agent: any): void {
     this.validateStructure(agent);
+    this.validateUnknownFields(agent);
     this.validateRequiredFields(agent);
     
     // Validate sub-components
@@ -87,6 +99,14 @@ export class AgentValidator {
     if (agent.llm_config) {
       LLMConfigValidator.validate(agent.llm_config);
     }
+    
+    if (agent.embedding) {
+      this.validateEmbedding(agent.embedding);
+    }
+    
+    if (agent.shared_blocks) {
+      this.validateSharedBlockReferences(agent.shared_blocks);
+    }
   }
   
   private static validateStructure(agent: any): void {
@@ -96,15 +116,19 @@ export class AgentValidator {
   }
   
   private static validateRequiredFields(agent: any): void {
-    const requiredFields = ['name', 'system_prompt'];
+    const requiredFields = ['name', 'description', 'system_prompt', 'llm_config'];
     const missing = requiredFields.filter(field => !(field in agent));
     
     if (missing.length > 0) {
       throw new Error(
         `Missing required fields: ${missing.join(', ')}\n` +
-        'Required fields: name, system_prompt\n' +
+        'Required fields: name, description, system_prompt, llm_config\n' +
         'Example:\n' +
         '- name: my-agent\n' +
+        '  description: "What this agent does"\n' +
+        '  llm_config:\n' +
+        '    model: "google_ai/gemini-2.5-pro"\n' +
+        '    context_window: 32000\n' +
         '  system_prompt:\n' +
         '    value: "You are helpful"'
       );
@@ -114,6 +138,51 @@ export class AgentValidator {
     if (!agent.name || typeof agent.name !== 'string' || agent.name.trim() === '') {
       throw new Error('Agent name must be a non-empty string.');
     }
+    
+    // Validate agent name format (no special characters that could break system)
+    if (!/^[a-zA-Z0-9_-]+$/.test(agent.name)) {
+      throw new Error('Agent name can only contain letters, numbers, hyphens, and underscores.');
+    }
+    
+    // Validate description is non-empty string
+    if (!agent.description || typeof agent.description !== 'string' || agent.description.trim() === '') {
+      throw new Error('Agent description must be a non-empty string.');
+    }
+  }
+  
+  private static validateUnknownFields(agent: any): void {
+    const allowedFields = [
+      'name', 'description', 'system_prompt', 'llm_config', 
+      'tools', 'memory_blocks', 'folders', 'embedding', 'shared_blocks'
+    ];
+    
+    const unknownFields = Object.keys(agent).filter(field => !allowedFields.includes(field));
+    
+    if (unknownFields.length > 0) {
+      throw new Error(
+        `Unknown fields: ${unknownFields.join(', ')}\n` +
+        `Allowed fields: ${allowedFields.join(', ')}\n` +
+        'Check for typos in field names.'
+      );
+    }
+  }
+  
+  private static validateEmbedding(embedding: any): void {
+    if (!embedding || typeof embedding !== 'string' || embedding.trim() === '') {
+      throw new Error('Embedding must be a non-empty string.');
+    }
+  }
+  
+  private static validateSharedBlockReferences(sharedBlocks: any): void {
+    if (!Array.isArray(sharedBlocks)) {
+      throw new Error('Agent shared_blocks must be an array.');
+    }
+    
+    sharedBlocks.forEach((blockName, index) => {
+      if (!blockName || typeof blockName !== 'string' || blockName.trim() === '') {
+        throw new Error(`Shared block reference ${index + 1} must be a non-empty string (block name).`);
+      }
+    });
   }
 }
 
@@ -184,9 +253,20 @@ export class MemoryBlockValidator {
       throw new Error('Memory blocks must be an array.');
     }
     
+    // Check for duplicate block names
+    const blockNames = new Set<string>();
+    
     blocks.forEach((block, index) => {
       try {
         this.validateBlock(block);
+        
+        // Check name uniqueness
+        if (block.name) {
+          if (blockNames.has(block.name)) {
+            throw new Error(`Duplicate memory block name "${block.name}". Block names must be unique within an agent.`);
+          }
+          blockNames.add(block.name);
+        }
       } catch (error: any) {
         throw new Error(`Memory block ${index + 1}: ${error.message}`);
       }
@@ -203,6 +283,20 @@ export class MemoryBlockValidator {
       throw new Error('Memory block must have a non-empty name.');
     }
     
+    // Description is required
+    if (!block.description || typeof block.description !== 'string' || block.description.trim() === '') {
+      throw new Error(`Memory block "${block.name}" must have a non-empty description.`);
+    }
+    
+    // Limit is required
+    if (!block.limit) {
+      throw new Error(`Memory block "${block.name}" must have a limit field.`);
+    }
+    
+    if (!Number.isInteger(block.limit) || block.limit <= 0) {
+      throw new Error(`Memory block "${block.name}" limit must be a positive integer.`);
+    }
+    
     // Must have content source
     const hasValue = 'value' in block;
     const hasFile = 'from_file' in block;
@@ -212,6 +306,21 @@ export class MemoryBlockValidator {
       throw new Error(
         `Memory block "${block.name}" must have one of: value, from_file, or from_bucket.`
       );
+    }
+    
+    // Only one content source allowed
+    const sources = [hasValue, hasFile, hasBucket].filter(Boolean);
+    if (sources.length > 1) {
+      throw new Error(`Memory block "${block.name}" can only have one of: value, from_file, or from_bucket (not multiple).`);
+    }
+    
+    // Validate string values are non-empty
+    if (hasValue && (!block.value || typeof block.value !== 'string' || block.value.trim() === '')) {
+      throw new Error(`Memory block "${block.name}" value must be a non-empty string.`);
+    }
+    
+    if (hasFile && (!block.from_file || typeof block.from_file !== 'string' || block.from_file.trim() === '')) {
+      throw new Error(`Memory block "${block.name}" from_file must be a non-empty string.`);
     }
     
     // Validate bucket config if present
@@ -302,16 +411,40 @@ export class SharedBlockValidator {
 export class LLMConfigValidator {
   static validate(config: any): void {
     if (!config || typeof config !== 'object') {
-      throw new Error('LLM config must be an object.');
+      throw new Error(
+        'LLM config is required and must be an object.\n' +
+        'Example:\n' +
+        'llm_config:\n' +
+        '  model: "google_ai/gemini-2.5-pro"\n' +
+        '  context_window: 32000'
+      );
     }
     
-    // Optional but validate if present
-    if (config.model && (typeof config.model !== 'string' || config.model.trim() === '')) {
-      throw new Error('LLM config model must be a non-empty string if specified.');
+    // Model is required
+    if (!config.model) {
+      throw new Error('LLM config must include a model field.');
     }
     
-    if (config.context_window && (!Number.isInteger(config.context_window) || config.context_window <= 0)) {
-      throw new Error('LLM config context_window must be a positive integer if specified.');
+    if (typeof config.model !== 'string' || config.model.trim() === '') {
+      throw new Error('LLM config model must be a non-empty string.');
+    }
+    
+    // Context window is required
+    if (!config.context_window) {
+      throw new Error('LLM config must include context_window field.');
+    }
+    
+    if (!Number.isInteger(config.context_window) || config.context_window <= 0) {
+      throw new Error('LLM config context_window must be a positive integer.');
+    }
+    
+    // Validate reasonable context window bounds
+    if (config.context_window < 1000) {
+      throw new Error('LLM config context_window must be at least 1000.');
+    }
+    
+    if (config.context_window > 200000) {
+      throw new Error('LLM config context_window cannot exceed 200000.');
     }
   }
 }
