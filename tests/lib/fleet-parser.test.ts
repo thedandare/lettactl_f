@@ -53,6 +53,9 @@ shared_blocks:
 agents:
   - name: test-agent
     description: "Test agent"
+    llm_config:
+      model: "google_ai/gemini-2.5-pro"
+      context_window: 32000
     shared_blocks:
       - shared-block
     system_prompt:
@@ -75,6 +78,9 @@ agents:
 agents:
   - name: test-agent
     description: "Test agent"
+    llm_config:
+      model: "google_ai/gemini-2.5-pro"
+      context_window: 32000
     system_prompt:
       from_file: "test-prompt.md"
 `;
@@ -115,6 +121,9 @@ agents:
 agents:
   - name: test-agent
     description: "Test agent"
+    llm_config:
+      model: "google_ai/gemini-2.5-pro"
+      context_window: 32000
     system_prompt:
       value: "Test"
     tools:
