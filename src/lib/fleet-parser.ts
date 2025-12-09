@@ -104,15 +104,21 @@ export class FleetParser {
   }
 
   private async resolvePromptContent(prompt: any): Promise<void> {
+    // Use generic content resolver
+    const userPrompt = (await this.resolveContent(prompt, undefined, 'system prompt')).trim();
+    
+    // Check if base prompt combination should be disabled
+    if (prompt.disable_base_prompt) {
+      prompt.value = userPrompt;
+      return;
+    }
+    
     // Load base Letta system instructions
     const basePath = path.resolve(this.basePath, 'config', 'base-letta-system.md');
     let baseInstructions = '';
     if (fs.existsSync(basePath)) {
       baseInstructions = fs.readFileSync(basePath, 'utf8').trim();
     }
-
-    // Use generic content resolver
-    const userPrompt = (await this.resolveContent(prompt, undefined, 'system prompt')).trim();
     
     // Concatenate base instructions with user prompt
     if (baseInstructions) {

@@ -375,7 +375,10 @@ const fleet = lettactl.createFleetConfig()
     name: `${userId}-assistant`,
     description: `AI assistant for ${userId}`,
     llm_config: { model: 'google_ai/gemini-2.5-pro', context_window: 32000 },
-    system_prompt: { value: `You are an AI assistant for ${userId}. Help with tasks and answer questions.` },
+    system_prompt: { 
+      value: `You are an AI assistant for ${userId}. Help with tasks and answer questions.`,
+      disable_base_prompt: false  // Optional: control base prompt combination
+    },
     memory_blocks: [{
       name: 'company-info',
       description: 'User company information',
@@ -449,6 +452,15 @@ system_prompt:
 ```
 
 The system automatically combines your prompt with base Letta instructions for optimal behavior.
+
+**Advanced Option: Disabling Base Prompt Combination**
+```yaml
+system_prompt:
+  from_file: "prompts/my-custom-prompt.md"
+  disable_base_prompt: true  # Use only your prompt, skip base Letta instructions
+```
+
+By default, lettactl prepends base Letta system instructions (memory management, tool usage patterns, etc.) to your custom prompt. Set `disable_base_prompt: true` to use only your prompt content - useful when you want complete control over the system prompt or are experimenting with custom agent behaviors.
 
 ### Memory Blocks
 
@@ -540,6 +552,7 @@ agents:
     system_prompt:
       value: "Direct prompt text"       # Option 1: inline
       from_file: "prompts/agent.md"    # Option 2: from file
+      disable_base_prompt: false       # Option 3: skip base Letta instructions (default: false)
     
     # Tools (optional)
     tools:

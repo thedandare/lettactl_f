@@ -41,6 +41,7 @@ export interface FolderConfig {
 export interface PromptConfig {
   value?: string;
   from_file?: string;
+  disable_base_prompt?: boolean; // Optional: skip base Letta system instructions combination
 }
 
 export interface MemoryBlock {
