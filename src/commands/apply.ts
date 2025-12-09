@@ -28,8 +28,7 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
     let supabaseBackend: SupabaseStorageBackend | undefined;
     
     try {
-      if (process.env.SUPABASE_URL || process.env.SUPABASE_ANON_KEY) {
-        // If any Supabase env vars are set, validate all are present
+      if (process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY) {
         supabaseBackend = new SupabaseStorageBackend();
         console.log('Supabase backend configured for cloud storage access');
       }
