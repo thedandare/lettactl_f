@@ -13,7 +13,7 @@ export interface FleetParserOptions {
 export class FleetParser {
   public basePath: string;
   private storageManager: StorageBackendManager;
-  private toolConfigs: Map<string, any> = new Map();
+  public toolConfigs: Map<string, any> = new Map();
 
   constructor(configPath: string, options: FleetParserOptions = {}) {
     this.basePath = options.rootPath || path.dirname(configPath);

@@ -88,7 +88,7 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
         allToolNames.add(toolName);
       }
     }
-    const globalToolSourceHashes = fileTracker.generateToolSourceHashes(Array.from(allToolNames));
+    const globalToolSourceHashes = fileTracker.generateToolSourceHashes(Array.from(allToolNames), parser.toolConfigs);
     
     // Register required tools
     if (verbose) console.log('Registering tools...');
@@ -173,7 +173,7 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
         const folderContentHashes = fileTracker.generateFolderFileHashes(agent.folders || []);
         
         // Generate tool source code hashes for change detection  
-        const toolSourceHashes = fileTracker.generateToolSourceHashes(agent.tools || []);
+        const toolSourceHashes = fileTracker.generateToolSourceHashes(agent.tools || [], parser.toolConfigs);
         
         // Generate memory block file content hashes for change detection
         const memoryBlockFileHashes = await fileTracker.generateMemoryBlockFileHashes(agent.memory_blocks || []);

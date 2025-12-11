@@ -49,7 +49,7 @@ export class FileContentTracker {
   /**
    * Generates content hashes for tool source files
    */
-  generateToolSourceHashes(toolNames: string[]): FileContentMap {
+  generateToolSourceHashes(toolNames: string[], toolConfigs?: Map<string, any>): FileContentMap {
     const toolHashes: FileContentMap = {};
     
     for (const toolName of toolNames) {
@@ -58,7 +58,15 @@ export class FileContentTracker {
         continue;
       }
       
-      const toolPath = path.join('tools', `${toolName}.py`);
+      // Use tool config path if available, otherwise default to tools/ directory
+      let toolPath: string;
+      const toolConfig = toolConfigs?.get(toolName);
+      if (toolConfig && typeof toolConfig === 'object' && toolConfig.from_file) {
+        toolPath = toolConfig.from_file;
+      } else {
+        toolPath = path.join('tools', `${toolName}.py`);
+      }
+      
       toolHashes[toolName] = this.generateFileContentHash(toolPath);
     }
     
