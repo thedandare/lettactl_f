@@ -91,7 +91,8 @@ export class DiffEngine {
     },
     toolRegistry: Map<string, string>,
     folderRegistry: Map<string, string>,
-    verbose: boolean = false
+    verbose: boolean = false,
+    sharedBlockIds?: Map<string, string>
   ): Promise<AgentUpdateOperations> {
     
     const operations: AgentUpdateOperations = {
@@ -167,7 +168,8 @@ export class DiffEngine {
         ...(desiredConfig.sharedBlocks || []).map(name => ({ name, isShared: true }))
       ],
       desiredConfig.memoryBlockFileHashes || {},
-      existingAgent.name
+      existingAgent.name,
+      sharedBlockIds
     );
     operations.operationCount += operations.blocks.toAdd.length + operations.blocks.toRemove.length + operations.blocks.toUpdate.length;
 
@@ -254,7 +256,8 @@ export class DiffEngine {
     currentBlocks: any[],
     desiredBlocks: Array<{ name: string; isShared?: boolean; description?: string; limit?: number; value?: string }>,
     memoryBlockFileHashes: Record<string, string> = {},
-    agentName?: string
+    agentName?: string,
+    sharedBlockIds?: Map<string, string>
   ): Promise<BlockDiff> {
     // Extract base names from versioned labels (e.g., "brand_identity__v__20251210-550e4a42" -> "brand_identity")
     const extractBaseName = (label: string): string => {
@@ -303,12 +306,18 @@ export class DiffEngine {
       if (desiredBlockNames.has(baseName)) {
         // Block exists in both current and desired
         const blockName = baseName;
-        
-        // Check if content has changed by comparing with file hash
-        if (this.hasFileBasedContent(blockName, memoryBlockFileHashes)) {
+
+        // Check if this is a shared block with a new version
+        const newSharedBlockId = sharedBlockIds?.get(blockName);
+        if (newSharedBlockId && newSharedBlockId !== block.id) {
+          console.log(`Shared block ${blockName} has new version, marking for update...`);
+          toUpdate.push({ name: blockName, currentId: block.id, newId: newSharedBlockId });
+        }
+        // Check if content has changed by comparing with file hash (per-agent blocks)
+        else if (this.hasFileBasedContent(blockName, memoryBlockFileHashes)) {
           // This block has file-based content, assume it might have changed and mark for update
           console.log(`Block ${blockName} has file-based content, checking for updates...`);
-          
+
           // Create new block with updated content and mark for update
           const newBlockId = this.blockManager.getSharedBlockId(blockName); // Get updated block ID
           if (newBlockId && newBlockId !== block.id) {

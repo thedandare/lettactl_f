@@ -249,7 +249,8 @@ export async function applyCommand(options: { file: string; agent?: string; dryR
               { ...agentConfig, memoryBlockFileHashes },
               toolNameToId,
               createdFolders,
-              verbose
+              verbose,
+              sharedBlockIds
             );
 
             spinner.stop();
