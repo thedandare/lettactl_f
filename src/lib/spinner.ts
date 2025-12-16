@@ -1,6 +1,7 @@
 import ora from 'ora';
 
 export interface SpinnerInterface {
+  text: string;
   start(): SpinnerInterface;
   succeed(text?: string): SpinnerInterface;
   fail(text?: string): SpinnerInterface;
@@ -8,6 +9,8 @@ export interface SpinnerInterface {
 }
 
 class NoSpinner implements SpinnerInterface {
+  text: string = '';
+
   start(): SpinnerInterface {
     return this;
   }

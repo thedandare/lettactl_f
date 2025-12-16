@@ -64,6 +64,8 @@ program
   .argument('[name]', 'specific resource name (optional)')
   .option('-o, --output <format>', 'output format (table|json|yaml)', 'table')
   .option('-a, --agent <name>', 'filter by agent name (for blocks, tools, folders)')
+  .option('--shared', 'show only resources attached to 2+ agents')
+  .option('--orphaned', 'show only resources attached to 0 agents')
   .action(getCommand);
 
 // Describe command - detailed agent info

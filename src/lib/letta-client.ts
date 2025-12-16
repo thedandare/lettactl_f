@@ -41,9 +41,26 @@ export class LettaClientWrapper {
     return await this.client.blocks.create(blockData);
   }
 
-  async listBlocks(options?: { limit?: number }) {
+  async listBlocks(options?: {
+    limit?: number;
+    connectedAgentsCountEq?: number[];
+    connectedAgentsCountGt?: number;
+    connectedAgentsCountLt?: number;
+  }) {
     const allBlocks: any[] = [];
-    for await (const block of this.client.blocks.list({ limit: options?.limit || 1000 })) {
+    const params: any = { limit: options?.limit || 1000 };
+
+    if (options?.connectedAgentsCountEq !== undefined) {
+      params.connected_to_agents_count_eq = options.connectedAgentsCountEq;
+    }
+    if (options?.connectedAgentsCountGt !== undefined) {
+      params.connected_to_agents_count_gt = options.connectedAgentsCountGt;
+    }
+    if (options?.connectedAgentsCountLt !== undefined) {
+      params.connected_to_agents_count_lt = options.connectedAgentsCountLt;
+    }
+
+    for await (const block of this.client.blocks.list(params)) {
       allBlocks.push(block);
     }
     return allBlocks;

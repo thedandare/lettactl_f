@@ -10,6 +10,8 @@ const SUPPORTED_RESOURCES = ['agents', 'blocks', 'tools', 'folders'];
 interface GetOptions {
   output?: string;
   agent?: string;
+  shared?: boolean;
+  orphaned?: boolean;
 }
 
 async function getCommandImpl(resource: string, _name?: string, options?: GetOptions, command?: any) {
@@ -18,6 +20,17 @@ async function getCommandImpl(resource: string, _name?: string, options?: GetOpt
   const client = new LettaClientWrapper();
   const resolver = new AgentResolver(client);
   const spinnerEnabled = getSpinnerEnabled(command);
+
+  // Validate flag combinations
+  if (options?.shared && options?.orphaned) {
+    throw new Error('Cannot use --shared and --orphaned together');
+  }
+  if ((options?.shared || options?.orphaned) && options?.agent) {
+    throw new Error('Cannot use --shared or --orphaned with --agent');
+  }
+  if ((options?.shared || options?.orphaned) && resource === 'agents') {
+    console.log('Note: --shared and --orphaned flags are ignored for "get agents"');
+  }
 
   // If --agent flag is provided, resolve agent name to ID
   let agentId: string | undefined;
@@ -43,13 +56,13 @@ async function getCommandImpl(resource: string, _name?: string, options?: GetOpt
       await getAgents(resolver, options, spinnerEnabled);
       break;
     case 'blocks':
-      await getBlocks(client, options, spinnerEnabled, agentId);
+      await getBlocks(client, resolver, options, spinnerEnabled, agentId);
       break;
     case 'tools':
-      await getTools(client, options, spinnerEnabled, agentId);
+      await getTools(client, resolver, options, spinnerEnabled, agentId);
       break;
     case 'folders':
-      await getFolders(client, options, spinnerEnabled, agentId);
+      await getFolders(client, resolver, options, spinnerEnabled, agentId);
       break;
   }
 }
@@ -83,11 +96,16 @@ async function getAgents(
 
 async function getBlocks(
   client: LettaClientWrapper,
-  options?: { output?: string },
+  _resolver: AgentResolver,
+  options?: GetOptions,
   spinnerEnabled?: boolean,
   agentId?: string
 ) {
-  const label = agentId ? 'Loading agent blocks...' : 'Loading blocks...';
+  let label = 'Loading blocks...';
+  if (agentId) label = 'Loading agent blocks...';
+  else if (options?.shared) label = 'Loading shared blocks...';
+  else if (options?.orphaned) label = 'Loading orphaned blocks...';
+
   const spinner = createSpinner(label, spinnerEnabled).start();
 
   try {
@@ -95,6 +113,12 @@ async function getBlocks(
     if (agentId) {
       const blocks = await client.listAgentBlocks(agentId);
       blockList = Array.isArray(blocks) ? blocks : (blocks as any).items || [];
+    } else if (options?.shared) {
+      // Use API filter: blocks attached to 2+ agents
+      blockList = await client.listBlocks({ connectedAgentsCountGt: 1 });
+    } else if (options?.orphaned) {
+      // Use API filter: blocks attached to 0 agents
+      blockList = await client.listBlocks({ connectedAgentsCountEq: [0] });
     } else {
       blockList = await client.listBlocks();
     }
@@ -105,7 +129,10 @@ async function getBlocks(
     }
 
     if (blockList.length === 0) {
-      console.log(agentId ? 'No blocks attached to this agent' : 'No blocks found');
+      if (agentId) console.log('No blocks attached to this agent');
+      else if (options?.shared) console.log('No shared blocks found (attached to 2+ agents)');
+      else if (options?.orphaned) console.log('No orphaned blocks found (attached to 0 agents)');
+      else console.log('No blocks found');
       return;
     }
 
@@ -118,18 +145,51 @@ async function getBlocks(
 
 async function getTools(
   client: LettaClientWrapper,
-  options?: { output?: string },
+  resolver: AgentResolver,
+  options?: GetOptions,
   spinnerEnabled?: boolean,
   agentId?: string
 ) {
-  const label = agentId ? 'Loading agent tools...' : 'Loading tools...';
+  let label = 'Loading tools...';
+  if (agentId) label = 'Loading agent tools...';
+  else if (options?.shared) label = 'Loading shared tools...';
+  else if (options?.orphaned) label = 'Loading orphaned tools...';
+
   const spinner = createSpinner(label, spinnerEnabled).start();
 
   try {
     let toolList: any[];
+
     if (agentId) {
       const tools = await client.listAgentTools(agentId);
       toolList = Array.isArray(tools) ? tools : (tools as any).items || [];
+    } else if (options?.shared || options?.orphaned) {
+      // Client-side computation: count tool usage across all agents
+      spinner.text = 'Fetching all tools...';
+      const allTools = await client.listTools();
+
+      spinner.text = 'Fetching all agents...';
+      const allAgents = await resolver.getAllAgents();
+
+      spinner.text = 'Computing tool usage...';
+      const toolUsageCount = new Map<string, number>();
+      allTools.forEach((t: any) => toolUsageCount.set(t.id, 0));
+
+      for (const agent of allAgents) {
+        const agentTools = await client.listAgentTools(agent.id);
+        const agentToolList = Array.isArray(agentTools) ? agentTools : (agentTools as any).items || [];
+        for (const tool of agentToolList) {
+          const count = toolUsageCount.get(tool.id) || 0;
+          toolUsageCount.set(tool.id, count + 1);
+        }
+      }
+
+      // Filter based on flag
+      if (options?.shared) {
+        toolList = allTools.filter((t: any) => (toolUsageCount.get(t.id) || 0) >= 2);
+      } else {
+        toolList = allTools.filter((t: any) => (toolUsageCount.get(t.id) || 0) === 0);
+      }
     } else {
       toolList = await client.listTools();
     }
@@ -140,7 +200,10 @@ async function getTools(
     }
 
     if (toolList.length === 0) {
-      console.log(agentId ? 'No tools attached to this agent' : 'No tools found');
+      if (agentId) console.log('No tools attached to this agent');
+      else if (options?.shared) console.log('No shared tools found (attached to 2+ agents)');
+      else if (options?.orphaned) console.log('No orphaned tools found (attached to 0 agents)');
+      else console.log('No tools found');
       return;
     }
 
@@ -153,18 +216,51 @@ async function getTools(
 
 async function getFolders(
   client: LettaClientWrapper,
-  options?: { output?: string },
+  resolver: AgentResolver,
+  options?: GetOptions,
   spinnerEnabled?: boolean,
   agentId?: string
 ) {
-  const label = agentId ? 'Loading agent folders...' : 'Loading folders...';
+  let label = 'Loading folders...';
+  if (agentId) label = 'Loading agent folders...';
+  else if (options?.shared) label = 'Loading shared folders...';
+  else if (options?.orphaned) label = 'Loading orphaned folders...';
+
   const spinner = createSpinner(label, spinnerEnabled).start();
 
   try {
     let folderList: any[];
+
     if (agentId) {
       const folders = await client.listAgentFolders(agentId);
       folderList = Array.isArray(folders) ? folders : (folders as any).items || [];
+    } else if (options?.shared || options?.orphaned) {
+      // Client-side computation: count folder usage across all agents
+      spinner.text = 'Fetching all folders...';
+      const allFolders = await client.listFolders();
+
+      spinner.text = 'Fetching all agents...';
+      const allAgents = await resolver.getAllAgents();
+
+      spinner.text = 'Computing folder usage...';
+      const folderUsageCount = new Map<string, number>();
+      allFolders.forEach((f: any) => folderUsageCount.set(f.id, 0));
+
+      for (const agent of allAgents) {
+        const agentFolders = await client.listAgentFolders(agent.id);
+        const agentFolderList = Array.isArray(agentFolders) ? agentFolders : (agentFolders as any).items || [];
+        for (const folder of agentFolderList) {
+          const count = folderUsageCount.get(folder.id) || 0;
+          folderUsageCount.set(folder.id, count + 1);
+        }
+      }
+
+      // Filter based on flag
+      if (options?.shared) {
+        folderList = allFolders.filter((f: any) => (folderUsageCount.get(f.id) || 0) >= 2);
+      } else {
+        folderList = allFolders.filter((f: any) => (folderUsageCount.get(f.id) || 0) === 0);
+      }
     } else {
       folderList = await client.listFolders();
     }
@@ -175,7 +271,10 @@ async function getFolders(
     }
 
     if (folderList.length === 0) {
-      console.log(agentId ? 'No folders attached to this agent' : 'No folders found');
+      if (agentId) console.log('No folders attached to this agent');
+      else if (options?.shared) console.log('No shared folders found (attached to 2+ agents)');
+      else if (options?.orphaned) console.log('No orphaned folders found (attached to 0 agents)');
+      else console.log('No folders found');
       return;
     }
 
