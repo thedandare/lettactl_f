@@ -1,6 +1,7 @@
 import * as yaml from 'js-yaml';
 import * as fs from 'fs';
 import * as path from 'path';
+import * as crypto from 'crypto';
 import { FleetConfig, FolderConfig } from '../types/fleet-config';
 import { StorageBackendManager, SupabaseStorageBackend, BucketConfig } from './storage-backend';
 import { FleetConfigValidator } from './config-validators';
@@ -297,29 +298,32 @@ export class FleetParser {
           continue;
         }
       } else {
-        // Tool exists - check if source code has changed
-        const currentSourceHash = toolSourceHashes[toolName];
+        // Tool exists - check if source code has actually changed
+        const defaultPath = path.join(this.basePath, 'tools', `${toolName}.py`);
 
-        if (currentSourceHash) {
-          // We have a hash for this tool, meaning source code is being tracked
-          if (verbose) console.log(`Re-registering tool due to potential source changes: ${toolName}`);
-          try {
-            const defaultPath = path.join(this.basePath, 'tools', `${toolName}.py`);
+        try {
+          const newSourceCode = await this.resolveContent(
+            typeof toolConfig === 'object' ? toolConfig : {},
+            defaultPath,
+            `tool: ${toolName}`
+          );
 
-            const sourceCode = await this.resolveContent(
-              typeof toolConfig === 'object' ? toolConfig : {},
-              defaultPath,
-              `tool: ${toolName}`
-            );
+          // Hash both old and new source code for comparison
+          const newHash = crypto.createHash('md5').update(newSourceCode).digest('hex').substring(0, 12);
+          const existingHash = tool.source_code
+            ? crypto.createHash('md5').update(tool.source_code).digest('hex').substring(0, 12)
+            : '';
 
-            tool = await client.createTool({ source_code: sourceCode });
-            if (verbose) console.log(`Tool ${toolName} re-registered`);
-          } catch (error: any) {
-            console.warn(`Failed to re-register tool ${toolName}: ${error.message}`);
-            // Continue with existing tool if re-registration fails
+          if (newHash !== existingHash) {
+            // Source code actually changed - re-register
+            if (verbose) console.log(`Tool ${toolName} source changed (${existingHash} -> ${newHash}), re-registering`);
+            tool = await client.createTool({ source_code: newSourceCode });
+          } else {
+            if (verbose) console.log(`Tool ${toolName} unchanged, reusing existing`);
           }
-        } else {
-          if (verbose) console.log(`Using existing tool: ${toolName}`);
+        } catch (error: any) {
+          console.warn(`Failed to check tool ${toolName}: ${error.message}`);
+          // Continue with existing tool
         }
       }
 

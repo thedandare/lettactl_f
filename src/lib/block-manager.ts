@@ -108,7 +108,11 @@ export class BlockManager {
   async getOrCreateSharedBlock(blockConfig: any): Promise<string> {
     const blockKey = this.getBlockKey(blockConfig.name, true);
     const contentHash = this.generateContentHash(blockConfig.value);
-    const existing = this.blockRegistry.get(blockKey);
+    // Check both shared and non-shared keys (blocks loaded from server may not have shared_ prefix)
+    let existing = this.blockRegistry.get(blockKey);
+    if (!existing) {
+      existing = this.blockRegistry.get(this.getBlockKey(blockConfig.name, false));
+    }
 
     // Determine version strategy
     let newVersion: string;
@@ -283,8 +287,11 @@ export class BlockManager {
    * Gets the shared block ID by name
    */
   getSharedBlockId(blockName: string): string | null {
-    const blockKey = this.getBlockKey(blockName, true);
-    const existing = this.blockRegistry.get(blockKey);
+    // Check both shared and non-shared keys
+    let existing = this.blockRegistry.get(this.getBlockKey(blockName, true));
+    if (!existing) {
+      existing = this.blockRegistry.get(this.getBlockKey(blockName, false));
+    }
     return existing ? existing.id : null;
   }
 
