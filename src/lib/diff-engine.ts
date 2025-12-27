@@ -33,7 +33,7 @@ export interface FolderDiff {
 export interface AgentUpdateOperations {
   // Basic agent field updates (preserve conversation)
   updateFields?: {
-    systemPrompt?: string;
+    system?: string;
     model?: string;
     embedding?: string;
     contextWindow?: number;
@@ -124,7 +124,7 @@ export class DiffEngine {
     
     if (normalizedCurrent !== normalizedDesired) {
       if (verbose) console.log(`    System prompt differs - current length: ${normalizedCurrent.length}, desired length: ${normalizedDesired.length}`);
-      fieldUpdates.systemPrompt = desiredConfig.systemPrompt;
+      fieldUpdates.system = desiredConfig.systemPrompt;
       operations.operationCount++;
     }
 

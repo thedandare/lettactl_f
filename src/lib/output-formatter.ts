@@ -196,7 +196,7 @@ export class OutputFormatter {
   static showAgentUpdateDiff(operations: AgentUpdateOperations): void {
     // System prompt and basic field changes
     if (operations.updateFields) {
-      if (operations.updateFields.systemPrompt !== undefined) {
+      if (operations.updateFields.system !== undefined) {
         console.log(`  ~ System prompt: updated`);
       }
       if (operations.updateFields.model !== undefined) {
