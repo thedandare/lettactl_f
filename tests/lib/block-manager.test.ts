@@ -1,5 +1,6 @@
 import { BlockManager } from '../../src/lib/block-manager';
 import { LettaClientWrapper } from '../../src/lib/letta-client';
+import { generateContentHash } from '../../src/utils/hash-utils';
 
 jest.mock('../../src/lib/letta-client');
 
@@ -13,7 +14,7 @@ describe('BlockManager', () => {
   });
 
   describe('hashing', () => {
-    const hash = (content: string) => (manager as any).generateContentHash(content);
+    const hash = (content: string) => generateContentHash(content);
 
     it('is deterministic and unique', () => {
       expect(hash('a')).toBe(hash('a'));

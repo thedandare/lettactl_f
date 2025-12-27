@@ -1,6 +1,6 @@
 import { LettaClientWrapper } from './letta-client';
 import { normalizeResponse } from './response-normalizer';
-import * as crypto from 'crypto';
+import { generateContentHash, generateTimestampVersion } from '../utils/hash-utils';
 
 export interface AgentConfigHashes {
   overall: string;           // Combined hash for quick comparison
@@ -29,23 +29,6 @@ export class AgentManager {
     this.client = client;
   }
 
-  /**
-   * Generates a content hash for system prompt versioning
-   */
-  private generateContentHash(content: string): string {
-    return crypto.createHash('sha256').update(content).digest('hex').substring(0, 16);
-  }
-
-
-  /**
-   * Generates a timestamp-based version for system prompt changes
-   */
-  private generateTimestampVersion(contentHash: string): string {
-    const now = new Date();
-    const timestamp = now.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
-    const shortHash = contentHash.substring(0, 8);
-    return `${timestamp}-${shortHash}`;
-  }
 
   /**
    * Parses version from agent name (e.g., "recipe-assistant__v__20241202-abc123ef")
@@ -73,7 +56,7 @@ export class AgentManager {
         // Full configuration hashing will be done during comparison
         const configHashes: AgentConfigHashes = {
           overall: '',              // Will be populated during comparison
-          systemPrompt: this.generateContentHash(agent.system),
+          systemPrompt: generateContentHash(agent.system),
           tools: '',
           model: '', 
           memoryBlocks: '',
@@ -117,14 +100,14 @@ export class AgentManager {
   }): AgentConfigHashes {
     
     // System prompt hash
-    const systemPromptHash = this.generateContentHash(config.systemPrompt);
+    const systemPromptHash = generateContentHash(config.systemPrompt);
     
     // Tools hash - includes tool names and source code content when available
     const toolsWithContent = (config.tools || []).map(toolName => ({
       name: toolName,
       sourceHash: config.toolSourceHashes?.[toolName] || ''
     })).sort((a, b) => a.name.localeCompare(b.name));
-    const toolsHash = this.generateContentHash(JSON.stringify(toolsWithContent));
+    const toolsHash = generateContentHash(JSON.stringify(toolsWithContent));
     
     // Model configuration hash (model + embedding + context window)
     const modelConfig = {
@@ -132,13 +115,13 @@ export class AgentManager {
       embedding: config.embedding || "letta/letta-free",
       contextWindow: config.contextWindow || 64000
     };
-    const modelHash = this.generateContentHash(JSON.stringify(modelConfig));
+    const modelHash = generateContentHash(JSON.stringify(modelConfig));
     
     // Memory blocks hash - includes file content when available
     const normalizedMemoryBlocks = (config.memoryBlocks || [])
       .map(block => {
         const fileHash = config.memoryBlockFileHashes?.[block.name];
-        const valueHash = this.generateContentHash(block.value || '');
+        const valueHash = generateContentHash(block.value || '');
         return {
           name: block.name,
           description: block.description,
@@ -147,7 +130,7 @@ export class AgentManager {
         };
       })
       .sort((a, b) => a.name.localeCompare(b.name));
-    const memoryBlocksHash = this.generateContentHash(JSON.stringify(normalizedMemoryBlocks));
+    const memoryBlocksHash = generateContentHash(JSON.stringify(normalizedMemoryBlocks));
     
     // Folders hash - includes file contents when available  
     const normalizedFolders = (config.folders || [])
@@ -157,13 +140,13 @@ export class AgentManager {
         fileContentHashes: folder.fileContentHashes || {}
       }))
       .sort((a, b) => a.name.localeCompare(b.name));
-    const foldersHash = this.generateContentHash(JSON.stringify(normalizedFolders));
+    const foldersHash = generateContentHash(JSON.stringify(normalizedFolders));
     
     // Shared blocks hash
-    const sharedBlocksHash = this.generateContentHash(JSON.stringify([...(config.sharedBlocks || [])].sort()));
+    const sharedBlocksHash = generateContentHash(JSON.stringify([...(config.sharedBlocks || [])].sort()));
     
     // Overall hash combining all components
-    const overallHash = this.generateContentHash(JSON.stringify({
+    const overallHash = generateContentHash(JSON.stringify({
       systemPrompt: systemPromptHash,
       tools: toolsHash,
       model: modelHash,

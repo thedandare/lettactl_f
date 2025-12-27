@@ -1,6 +1,6 @@
 import { LettaClientWrapper } from './letta-client';
 import { normalizeResponse } from './response-normalizer';
-import * as crypto from 'crypto';
+import { generateContentHash, generateTimestampVersion } from '../utils/hash-utils';
 
 export interface BlockVersion {
   id: string;
@@ -24,13 +24,6 @@ export class BlockManager {
   }
 
   /**
-   * Generates a content hash for version detection
-   */
-  private generateContentHash(content: string): string {
-    return crypto.createHash('sha256').update(content).digest('hex').substring(0, 16);
-  }
-
-  /**
    * Loads existing blocks from the server and builds the registry
    */
   async loadExistingBlocks(): Promise<void> {
@@ -39,7 +32,7 @@ export class BlockManager {
 
     for (const block of blockList) {
       if (block.label && block.value) {
-        const contentHash = this.generateContentHash(block.value);
+        const contentHash = generateContentHash(block.value);
         const version = this.parseVersionFromLabel(block.label);
         const isShared = block.label.startsWith('shared_');
 
@@ -78,16 +71,6 @@ export class BlockManager {
   }
 
   /**
-   * Generates a timestamp-based version string
-   */
-  private generateTimestampVersion(contentHash: string): string {
-    const now = new Date();
-    const timestamp = now.toISOString().slice(0, 10).replace(/-/g, ''); // YYYYMMDD
-    const shortHash = contentHash.substring(0, 8);
-    return `${timestamp}-${shortHash}`;
-  }
-
-  /**
    * Validates and sanitizes user-defined version tags
    */
   private validateUserVersion(version: string): string {
@@ -107,7 +90,7 @@ export class BlockManager {
    */
   async getOrCreateSharedBlock(blockConfig: any): Promise<string> {
     const blockKey = this.getBlockKey(blockConfig.name, true);
-    const contentHash = this.generateContentHash(blockConfig.value);
+    const contentHash = generateContentHash(blockConfig.value);
     // Check both shared and non-shared keys (blocks loaded from server may not have shared_ prefix)
     let existing = this.blockRegistry.get(blockKey);
     if (!existing) {
@@ -122,7 +105,7 @@ export class BlockManager {
       newVersion = this.validateUserVersion(blockConfig.version);
       userDefined = true;
     } else {
-      newVersion = existing ? this.generateTimestampVersion(contentHash) : 'initial';
+      newVersion = existing ? generateTimestampVersion(contentHash) : 'initial';
     }
 
     if (existing) {
@@ -200,7 +183,7 @@ export class BlockManager {
   async getOrCreateAgentBlock(blockConfig: any, agentName: string): Promise<string> {
     const fullBlockName = `${blockConfig.name}`;
     const blockKey = this.getBlockKey(fullBlockName, false);
-    const contentHash = this.generateContentHash(blockConfig.value);
+    const contentHash = generateContentHash(blockConfig.value);
     const existing = this.blockRegistry.get(blockKey);
 
     // Determine version strategy
@@ -211,7 +194,7 @@ export class BlockManager {
       newVersion = this.validateUserVersion(blockConfig.version);
       userDefined = true;
     } else {
-      newVersion = existing ? this.generateTimestampVersion(contentHash) : 'initial';
+      newVersion = existing ? generateTimestampVersion(contentHash) : 'initial';
     }
 
     if (existing) {
