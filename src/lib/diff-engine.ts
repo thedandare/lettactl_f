@@ -224,21 +224,16 @@ export class DiffEngine {
           const newToolId = toolRegistry.get(toolName);
           
           if (newToolId && newToolId !== currentToolId) {
-            // Tool was re-registered (likely due to source code change)
-            toUpdate.push({ 
-              name: toolName, 
-              currentId: currentToolId, 
-              newId: newToolId, 
-              reason: 'source_code_changed' 
+            // Tool was re-registered (source code actually changed)
+            toUpdate.push({
+              name: toolName,
+              currentId: currentToolId,
+              newId: newToolId,
+              reason: 'source_code_changed'
             });
           } else {
-            // Tool ID is same but source might have changed, still mark as update needed
-            toUpdate.push({ 
-              name: toolName, 
-              currentId: currentToolId, 
-              newId: currentToolId, 
-              reason: 'source_content_changed' 
-            });
+            // Tool ID is same - fleet-parser already verified source hasn't changed
+            unchanged.push({ name: toolName, id: currentToolId });
           }
         } else {
           unchanged.push({ name: tool.name, id: tool.id });
