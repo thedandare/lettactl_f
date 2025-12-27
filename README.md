@@ -106,7 +106,15 @@ lettactl apply -f agents.yml --agent my-agent  # Deploy specific agent
 lettactl apply -f agents.yml --dry-run # See what would change
 lettactl apply -f agents.yml --root . # Specify root directory for file resolution
 lettactl apply -f agents.yml -v       # Verbose output
+
+# Template mode: apply config to existing agents matching a glob pattern
+lettactl apply -f template.yaml --match "*-assistant"  # All agents ending in -assistant
+lettactl apply -f template.yaml --match "user-*"       # All agents starting with user-
+lettactl apply -f template.yaml --match "*" --dry-run  # Preview changes to all agents
 ```
+
+**Template Mode (`--match`):**
+Apply a template configuration to multiple existing agents at once. Uses merge semantics - adds/updates tools, blocks, and prompts without removing existing resources. Perfect for propagating tool updates or shared config changes across agent fleets.
 
 ### Create Agents
 ```bash

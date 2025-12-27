@@ -52,6 +52,7 @@ program
   .description('Deploy agents from configuration')
   .option('-f, --file <path>', 'agent YAML configuration file', 'agents.yml')
   .option('--agent <pattern>', 'deploy only agents matching pattern')
+  .option('--match <pattern>', 'apply template config to all existing agents matching glob pattern')
   .option('--dry-run', 'show what would be created without making changes')
   .option('--root <path>', 'root directory for resolving file paths')
   .action(applyCommand);
