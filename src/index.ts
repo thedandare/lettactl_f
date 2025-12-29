@@ -129,6 +129,8 @@ program
   .option('-e, --embedding <embedding>', 'new embedding model')
   .option('-t, --timezone <timezone>', 'new timezone')
   .option('--tags <tags>', 'comma-separated tags')
+  .option('--add-tool <tools>', 'comma-separated tool names/IDs to add')
+  .option('--remove-tool <tools>', 'comma-separated tool names/IDs to remove')
   .action(updateCommand);
 
 // Export command - export agents to files

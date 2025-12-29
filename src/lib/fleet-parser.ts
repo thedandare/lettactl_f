@@ -266,17 +266,18 @@ export class FleetParser {
     for (const toolName of requiredToolNames) {
       const toolConfig = this.toolConfigs.get(toolName);
 
-      // Skip built-in tools
-      if (['archival_memory_insert', 'archival_memory_search'].includes(toolName)) {
-        const existingTool = existingToolsArray.find((t: any) => t.name === toolName);
-        if (existingTool) {
-          toolNameToId.set(toolName, existingTool.id);
-        }
-        continue;
-      }
-
       // Check if tool already exists
       let tool = existingToolsArray.find((t: any) => t.name === toolName);
+
+      // If not in the list, try fetching by name directly (handles core/hidden tools)
+      if (!tool) {
+        try {
+          tool = await client.getToolByName(toolName);
+          if (tool && verbose) console.log(`Found existing tool ${toolName} via direct lookup`);
+        } catch (e) {
+          // Ignore error, proceed to creation
+        }
+      }
 
       if (!tool) {
         // Tool doesn't exist - register it
@@ -322,7 +323,12 @@ export class FleetParser {
             if (verbose) console.log(`Tool ${toolName} unchanged, reusing existing`);
           }
         } catch (error: any) {
-          console.warn(`Failed to check tool ${toolName}: ${error.message}`);
+          // Only warn if it's NOT a "file not found" error, as missing local source for existing tool is valid
+          if (!error.message.includes('not found') && !error.message.includes('no value')) {
+             console.warn(`Failed to check tool ${toolName}: ${error.message}`);
+          } else if (verbose) {
+             console.log(`Using existing tool ${toolName} (local source not found)`);
+          }
           // Continue with existing tool
         }
       }

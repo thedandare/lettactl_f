@@ -119,6 +119,22 @@ export class LettaClientWrapper {
     return allTools;
   }
 
+  async getToolByName(name: string) {
+    // Try to fetch tool by name using query parameter if supported by SDK/API
+    try {
+      // Cast params to any to bypass potential type restrictions if SDK is outdated
+      const iterator = this.client.tools.list({ name } as any);
+      for await (const tool of iterator) {
+        if (tool.name === name) return tool;
+      }
+    } catch (e) {
+      // Fallback: list all and find (though inefficient, it's a safety net)
+      // But we already called listTools in the caller, so maybe just return null.
+      console.warn(`Failed to fetch tool by name '${name}':`, (e as Error).message);
+    }
+    return null;
+  }
+
   async createTool(toolData: any) {
     return await this.client.tools.create(toolData);
   }

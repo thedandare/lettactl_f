@@ -13,6 +13,8 @@ export default async function updateCommand(
     embedding?: string;
     timezone?: string;
     tags?: string;
+    addTool?: string;
+    removeTool?: string;
   }, 
   command: any
 ) {
@@ -47,7 +49,73 @@ export default async function updateCommand(
       updatePayload.tags = options.tags.split(',').map(tag => tag.trim());
     }
 
-    if (Object.keys(updatePayload).length === 0) {
+    // Handle tool additions/removals
+    let toolChanges = false;
+    
+    if (options.addTool) {
+      const toolsToAdd = options.addTool.split(',').map(t => t.trim());
+      for (const toolName of toolsToAdd) {
+        try {
+          // Try to find tool by name (handles core tools)
+          let tool = await client.getToolByName(toolName);
+          
+          if (!tool) {
+            // Try finding by ID if it looks like one
+            const allTools = await client.listTools();
+            const toolList = Array.isArray(allTools) ? allTools : (allTools as any).items || [];
+            tool = toolList.find((t: any) => t.id === toolName || t.name === toolName);
+          }
+          
+          if (tool) {
+            if (verbose) console.log(`Attaching tool ${tool.name} (${tool.id})...`);
+            await client.attachToolToAgent(String(agent.id), String(tool.id));
+            console.log(`Tool attached: ${tool.name}`);
+            toolChanges = true;
+          } else {
+            console.warn(`Warning: Tool '${toolName}' not found.`);
+          }
+        } catch (error: any) {
+          console.error(`Failed to attach tool ${toolName}:`, error.message);
+        }
+      }
+    }
+    
+    if (options.removeTool) {
+      const toolsToRemove = options.removeTool.split(',').map(t => t.trim());
+      for (const toolName of toolsToRemove) {
+        try {
+          // Need to find the tool first to get ID
+          let toolId = toolName;
+          let toolNameDisplay = toolName;
+          
+          // If it doesn't look like an ID, resolve it
+          if (!toolName.startsWith('tool-')) {
+             let tool = await client.getToolByName(toolName);
+             
+             if (!tool) {
+                // Fallback search
+                const allTools = await client.listTools();
+                const toolList = Array.isArray(allTools) ? allTools : (allTools as any).items || [];
+                tool = toolList.find((t: any) => t.name === toolName);
+             }
+             
+             if (tool) {
+               toolId = String(tool.id);
+               toolNameDisplay = String(tool.name);
+             }
+          }
+          
+          if (verbose) console.log(`Detaching tool ${toolNameDisplay} (${toolId})...`);
+          await client.detachToolFromAgent(String(agent.id), String(toolId));
+          console.log(`Tool detached: ${toolNameDisplay}`);
+          toolChanges = true;
+        } catch (error: any) {
+          console.warn(`Failed to detach tool ${toolName}:`, error.message);
+        }
+      }
+    }
+
+    if (Object.keys(updatePayload).length === 0 && !toolChanges) {
       console.log('No updates specified. Use --help to see available options.');
       return;
     }
@@ -57,15 +125,19 @@ export default async function updateCommand(
     }
 
     // Update the agent
-    const updatedAgent = await client.updateAgent(agent.id, updatePayload);
-    
-    console.log(`Agent ${agent.name} updated successfully`);
-    
-    if (verbose) {
-      console.log(`Updated agent ID: ${updatedAgent.id}`);
-      if (updatePayload.name) console.log(`Name changed to: ${updatePayload.name}`);
-      if (updatePayload.model) console.log(`Model changed to: ${updatePayload.model}`);
-      if (updatePayload.embedding) console.log(`Embedding changed to: ${updatePayload.embedding}`);
+    if (Object.keys(updatePayload).length > 0) {
+      const updatedAgent = await client.updateAgent(agent.id, updatePayload);
+      
+      console.log(`Agent ${agent.name} updated successfully`);
+      
+      if (verbose) {
+        console.log(`Updated agent ID: ${updatedAgent.id}`);
+        if (updatePayload.name) console.log(`Name changed to: ${updatePayload.name}`);
+        if (updatePayload.model) console.log(`Model changed to: ${updatePayload.model}`);
+        if (updatePayload.embedding) console.log(`Embedding changed to: ${updatePayload.embedding}`);
+      }
+    } else if (toolChanges) {
+      console.log(`Agent ${agent.name} updated successfully`);
     }
 
   } catch (error: any) {
