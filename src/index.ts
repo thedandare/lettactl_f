@@ -23,9 +23,9 @@ import { validateCommand } from './commands/validate';
 let verboseMode = false;
 
 // Validate required environment variables
-function validateEnvironment(this: any) {
+function validateEnvironment(thisCommand: any, actionCommand: any) {
   // Capture verbose flag for global error handler
-  verboseMode = this.opts().verbose || false;
+  verboseMode = thisCommand.opts().verbose || false;
 
   if (!process.env.LETTA_API_URL) {
     console.error('Error: LETTA_API_URL environment variable is required');
