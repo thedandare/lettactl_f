@@ -19,7 +19,7 @@ export class LettaCtl {
   private supabaseBackend?: SupabaseStorageBackend;
 
   constructor(options: LettaCtlOptions = {}) {
-    if (options.lettaApiUrl) process.env.LETTA_API_URL = options.lettaApiUrl;
+    if (options.lettaApiUrl) process.env.LETTA_BASE_URL = options.lettaApiUrl;
     if (options.lettaApiKey) process.env.LETTA_API_KEY = options.lettaApiKey;
     if (options.supabaseUrl) process.env.SUPABASE_URL = options.supabaseUrl;
     if (options.supabaseAnonKey) process.env.SUPABASE_ANON_KEY = options.supabaseAnonKey;

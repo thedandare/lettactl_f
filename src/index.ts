@@ -27,17 +27,23 @@ function validateEnvironment(thisCommand: any, actionCommand: any) {
   // Capture verbose flag for global error handler
   verboseMode = thisCommand.opts().verbose || false;
 
-  if (!process.env.LETTA_API_URL) {
-    console.error('Error: LETTA_API_URL environment variable is required');
-    console.error('Set it with: export LETTA_API_URL=http://localhost:8283');
+  if (!process.env.LETTA_BASE_URL) {
+    console.error('Error: LETTA_BASE_URL environment variable is required');
+    console.error('');
+    console.error('For self-hosting:');
+    console.error('  export LETTA_BASE_URL=http://localhost:8283');
+    console.error('');
+    console.error('For Letta Cloud:');
+    console.error('  export LETTA_BASE_URL=https://api.letta.com');
+    console.error('  export LETTA_API_KEY=your_api_key');
     process.exit(1);
   }
 
   // API key required unless localhost (self-hosting)
-  const isLocalhost = process.env.LETTA_API_URL.includes('localhost');
+  const isLocalhost = process.env.LETTA_BASE_URL.includes('localhost');
 
   if (!isLocalhost && !process.env.LETTA_API_KEY) {
-    console.error(`Error: LETTA_API_KEY is required for Letta Cloud (${process.env.LETTA_API_URL})`);
+    console.error(`Error: LETTA_API_KEY is required for Letta Cloud (${process.env.LETTA_BASE_URL})`);
     console.error('Set it with: export LETTA_API_KEY=your_api_key');
     process.exit(1);
   }

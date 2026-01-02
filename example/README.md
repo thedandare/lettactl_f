@@ -6,7 +6,7 @@ This folder contains a complete example of how to use LettaCTL to manage Letta A
 
 1. **Set your Letta API URL:**
    ```bash
-   export LETTA_API_URL=http://localhost:8283
+   export LETTA_BASE_URL=http://localhost:8283
    ```
 
 2. **Deploy the example agents:**

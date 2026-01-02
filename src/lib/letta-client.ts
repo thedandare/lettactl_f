@@ -6,7 +6,7 @@ export class LettaClientWrapper {
 
   constructor() {
     const config: any = {
-      baseURL: process.env.LETTA_API_URL!,
+      baseURL: process.env.LETTA_BASE_URL!,
     };
     
     // API key is optional for self-hosting
