@@ -49,9 +49,17 @@ export interface ToolConfig {
   };
 }
 
+export interface FromBucketConfig {
+  provider: 'supabase'; // Matches BucketConfig from storage-backend
+  bucket: string;
+  path: string;
+}
+
+export type FolderFileConfig = string | { from_bucket: FromBucketConfig };
+
 export interface FolderConfig {
   name: string;
-  files: string[];
+  files: FolderFileConfig[];
 }
 
 export interface PromptConfig {

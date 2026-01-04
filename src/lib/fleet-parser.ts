@@ -2,7 +2,7 @@ import * as yaml from 'js-yaml';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
-import { FleetConfig, FolderConfig } from '../types/fleet-config';
+import { FleetConfig, FolderConfig, FolderFileConfig } from '../types/fleet-config';
 import { StorageBackendManager, SupabaseStorageBackend, BucketConfig } from './storage-backend';
 import { FleetConfigValidator } from './config-validators';
 
@@ -152,30 +152,44 @@ export class FleetParser {
   }
 
   private expandFolderFiles(folder: FolderConfig): void {
-    const expandedFiles: string[] = [];
+    const expandedFiles: FolderFileConfig[] = [];
     const filesDir = path.resolve(this.basePath, 'files');
 
     for (const file of folder.files) {
-      if (file === 'files/*' || file === 'files/**/*') {
+      // Pass through from_bucket configs unchanged
+      if (typeof file === 'object' && 'from_bucket' in file) {
+        expandedFiles.push(file);
+        continue;
+      }
+
+      // Handle string file paths
+      const filePath = file as string;
+      if (filePath === 'files/*' || filePath === 'files/**/*') {
         // Glob all files in the files directory
         if (fs.existsSync(filesDir)) {
           const allFiles = this.getAllFilesRecursive(filesDir);
           expandedFiles.push(...allFiles.map(f => path.relative(this.basePath, f)));
         }
-      } else if (file.startsWith('files/')) {
+      } else if (filePath.startsWith('files/')) {
         // Individual file in files directory
-        const fullPath = path.resolve(this.basePath, file);
+        const fullPath = path.resolve(this.basePath, filePath);
         if (fs.existsSync(fullPath)) {
-          expandedFiles.push(file);
+          expandedFiles.push(filePath);
         }
       } else {
         // Regular file path
-        expandedFiles.push(file);
+        expandedFiles.push(filePath);
       }
     }
 
-    // Remove duplicates
-    folder.files = [...new Set(expandedFiles)];
+    // Remove duplicates (only for string paths)
+    const seen = new Set<string>();
+    folder.files = expandedFiles.filter(f => {
+      if (typeof f === 'object') return true; // Keep all from_bucket configs
+      if (seen.has(f)) return false;
+      seen.add(f);
+      return true;
+    });
   }
 
   private getAllFilesRecursive(dir: string): string[] {

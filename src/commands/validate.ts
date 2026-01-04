@@ -21,9 +21,9 @@ export async function validateCommand(options: { file: string }) {
     const parser = new FleetParser(options.file, { supabaseBackend });
     await parser.parseFleetConfig(options.file);
     
-    console.log('✅ Configuration is valid!');
+    console.log('Configuration is valid.');
   } catch (error: any) {
-    console.error('❌ Configuration validation failed:');
+    console.error('Configuration validation failed:');
     console.error(error.message);
     process.exit(1);
   }

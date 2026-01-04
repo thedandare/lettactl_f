@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import * as crypto from 'crypto';
 import { StorageBackendManager, BucketConfig } from './storage-backend';
+import { FolderConfig, FolderFileConfig } from '../types/fleet-config';
 
 export interface FileContentMap {
   [filePath: string]: string; // filePath -> content hash
@@ -117,18 +118,20 @@ export class FileContentTracker {
 
   /**
    * Generates content hashes for folder files (grouped by folder)
+   * Skips from_bucket files as they're remote and tracked differently
    */
-  generateFolderFileHashes(folderConfigs: Array<{
-    name: string; 
-    files: string[];
-  }>): Map<string, FileContentMap> {
+  generateFolderFileHashes(folderConfigs: FolderConfig[]): Map<string, FileContentMap> {
     const folderHashes = new Map<string, FileContentMap>();
-    
+
     for (const folder of folderConfigs) {
-      const fileHashes = this.generateFileContentHashes(folder.files);
+      // Filter to only local file paths (strings), skip from_bucket configs
+      const localFiles = folder.files.filter(
+        (f): f is string => typeof f === 'string'
+      );
+      const fileHashes = this.generateFileContentHashes(localFiles);
       folderHashes.set(folder.name, fileHashes);
     }
-    
+
     return folderHashes;
   }
 

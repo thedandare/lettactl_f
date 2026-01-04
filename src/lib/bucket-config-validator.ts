@@ -15,6 +15,7 @@ export class BucketConfigValidator {
     this.validateRequiredFields(config);
     this.validateValues(config);
     this.validateDataTypes(config);
+    this.validateProvider(config);
   }
   
   private static validateStructure(config: any): void {
@@ -97,17 +98,8 @@ export class BucketConfigValidator {
    * Validates provider-specific requirements
    */
   static validateProvider(config: BucketConfig): void {
-    const provider = String(config.provider).toLowerCase();
-    
-    // Check for common typos
-    if (provider.includes('supab') || provider.includes('suapb')) {
-      throw new Error(`Provider '${config.provider}' not recognized. Did you mean 'supabase'?`);
-    }
-    
-    // Validate supported providers
-    const supportedProviders = ['supabase'];
-    if (!supportedProviders.includes(provider)) {
-      throw new Error(`Provider '${config.provider}' not yet supported. Supported: ${supportedProviders.join(', ')}. Coming soon: s3, gcs`);
+    if (config.provider !== 'supabase') {
+      throw new Error(`Provider '${config.provider}' not supported. Supported: supabase`);
     }
   }
 }

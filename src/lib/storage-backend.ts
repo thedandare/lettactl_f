@@ -52,7 +52,7 @@ export class StorageBackendManager {
   async readFromBucket(config: BucketConfig): Promise<string> {
     // Validate bucket config structure
     this.validateBucketConfig(config);
-    
+
     if (config.provider === 'supabase') {
       if (!this.supabaseBackend) {
         throw new Error('Supabase backend not configured');
@@ -64,8 +64,29 @@ export class StorageBackendManager {
     if (provider.includes('supab') || provider.includes('suapb')) {
       throw new Error(`Provider '${config.provider}' not recognized. Did you mean 'supabase'?`);
     }
-    
+
     // TODO: Add s3, gcs support
+    throw new Error(`Provider '${config.provider}' not yet supported. Supported: supabase. Coming soon: s3, gcs`);
+  }
+
+  /**
+   * Download binary file from bucket (for PDFs, images, etc.)
+   */
+  async downloadBinaryFromBucket(config: BucketConfig): Promise<Buffer> {
+    this.validateBucketConfig(config);
+
+    if (config.provider === 'supabase') {
+      if (!this.supabaseBackend) {
+        throw new Error('Supabase backend not configured');
+      }
+      return this.supabaseBackend.downloadBinaryFromBucket(config.bucket, config.path);
+    }
+
+    const provider = String(config.provider).toLowerCase();
+    if (provider.includes('supab') || provider.includes('suapb')) {
+      throw new Error(`Provider '${config.provider}' not recognized. Did you mean 'supabase'?`);
+    }
+
     throw new Error(`Provider '${config.provider}' not yet supported. Supported: supabase. Coming soon: s3, gcs`);
   }
   
@@ -206,6 +227,45 @@ export class SupabaseStorageBackend {
         `Invalid SUPABASE_URL format: ${url}\n` +
         'Expected format: https://your-project.supabase.co'
       );
+    }
+  }
+
+  async downloadBinaryFromBucket(bucket: string, filePath: string): Promise<Buffer> {
+    try {
+      const { data, error } = await this.supabase.storage
+        .from(bucket)
+        .download(filePath)
+
+      if (error) {
+        StorageErrorHandler.handleProviderError(error, {
+          provider: 'supabase',
+          operation: 'download',
+          bucket,
+          filePath
+        });
+      }
+
+      if (!data) {
+        StorageErrorHandler.handleProviderError(
+          { message: 'No data returned from download' },
+          { provider: 'supabase', operation: 'download', bucket, filePath }
+        );
+      }
+
+      const arrayBuffer = await data.arrayBuffer()
+      return Buffer.from(arrayBuffer)
+
+    } catch (error: any) {
+      if (error.message.includes('Failed to download')) {
+        throw error;
+      }
+
+      StorageErrorHandler.handleProviderError(error, {
+        provider: 'supabase',
+        operation: 'download',
+        bucket,
+        filePath
+      });
     }
   }
 

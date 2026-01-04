@@ -16,12 +16,12 @@ class NoSpinner implements SpinnerInterface {
   }
 
   succeed(text?: string): SpinnerInterface {
-    if (text) console.log(`✓ ${text}`);
+    if (text) console.log(`[OK] ${text}`);
     return this;
   }
 
   fail(text?: string): SpinnerInterface {
-    if (text) console.log(`✗ ${text}`);
+    if (text) console.log(`[FAIL] ${text}`);
     return this;
   }
 

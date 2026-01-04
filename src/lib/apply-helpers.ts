@@ -1,5 +1,6 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { LettaClientWrapper } from './letta-client';
 import { BlockManager } from './block-manager';
 import { AgentManager, AgentVersion } from './agent-manager';
@@ -8,6 +9,8 @@ import { FileContentTracker } from './file-content-tracker';
 import { OutputFormatter } from './output-formatter';
 import { createSpinner } from './spinner';
 import { FleetParser } from './fleet-parser';
+import { StorageBackendManager, SupabaseStorageBackend } from './storage-backend';
+import { FolderFileConfig } from '../types/fleet-config';
 
 export async function processSharedBlocks(
   config: any,
@@ -23,6 +26,23 @@ export async function processSharedBlocks(
     }
   }
   return sharedBlockIds;
+}
+
+// Helper to check if a file config is a from_bucket config
+function isFromBucketConfig(fileConfig: FolderFileConfig): fileConfig is { from_bucket: { provider: 'supabase'; bucket: string; path: string } } {
+  return typeof fileConfig === 'object' && 'from_bucket' in fileConfig;
+}
+
+// Create storage backend manager lazily (only when needed)
+let storageManager: StorageBackendManager | null = null;
+function getStorageManager(): StorageBackendManager {
+  if (!storageManager) {
+    const supabaseBackend = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY
+      ? new SupabaseStorageBackend()
+      : undefined;
+    storageManager = new StorageBackendManager({ supabaseBackend });
+  }
+  return storageManager;
 }
 
 export async function processFolders(
@@ -60,23 +80,53 @@ export async function processFolders(
           createdFolders.set(folderConfig.name, folder.id);
 
           if (verbose) console.log(`Uploading ${folderConfig.files.length} files...`);
-          for (const filePath of folderConfig.files) {
+          for (const fileConfig of folderConfig.files) {
             try {
-              const resolvedPath = path.resolve(parser.basePath, filePath);
+              if (isFromBucketConfig(fileConfig)) {
+                // Handle from_bucket config
+                const bucketConfig = fileConfig.from_bucket;
+                const fileName = path.basename(bucketConfig.path);
 
-              if (!fs.existsSync(resolvedPath)) {
-                console.warn(`File not found, skipping: ${filePath}`);
-                continue;
+                if (verbose) console.log(`  Downloading from bucket: ${bucketConfig.bucket}/${bucketConfig.path}...`);
+
+                const storage = getStorageManager();
+                const fileBuffer = await storage.downloadBinaryFromBucket(bucketConfig);
+
+                // Write to temp file so the stream has proper file metadata
+                const tempDir = os.tmpdir();
+                const tempPath = path.join(tempDir, fileName);
+                fs.writeFileSync(tempPath, fileBuffer);
+
+                if (verbose) console.log(`  Uploading ${fileName} to folder...`);
+                const fileStream = fs.createReadStream(tempPath);
+                await client.uploadFileToFolder(fileStream, folder.id, fileName);
+
+                // Cleanup temp file
+                fs.unlinkSync(tempPath);
+
+                if (verbose) console.log(`  Uploaded: ${fileName} (from bucket)`);
+              } else {
+                // Handle local file path (existing behavior)
+                const filePath = fileConfig;
+                const resolvedPath = path.resolve(parser.basePath, filePath);
+
+                if (!fs.existsSync(resolvedPath)) {
+                  console.warn(`File not found, skipping: ${filePath}`);
+                  continue;
+                }
+
+                if (verbose) console.log(`  Uploading ${filePath}...`);
+                const fileStream = fs.createReadStream(resolvedPath);
+
+                await client.uploadFileToFolder(fileStream, folder.id, path.basename(filePath));
+
+                if (verbose) console.log(`  Uploaded: ${filePath}`);
               }
-
-              if (verbose) console.log(`  Uploading ${filePath}...`);
-              const fileStream = fs.createReadStream(resolvedPath);
-
-              await client.uploadFileToFolder(fileStream, folder.id, path.basename(filePath));
-
-              if (verbose) console.log(`  Uploaded: ${filePath}`);
             } catch (error: any) {
-              console.error(`  Failed to upload ${filePath}:`, error.message);
+              const fileDesc = isFromBucketConfig(fileConfig)
+                ? `${fileConfig.from_bucket.bucket}/${fileConfig.from_bucket.path}`
+                : fileConfig;
+              console.error(`  Failed to upload ${fileDesc}:`, error.message);
             }
           }
         } else {

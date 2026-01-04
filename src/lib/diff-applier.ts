@@ -1,7 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
+import * as os from 'os';
 import { LettaClientWrapper } from './letta-client';
 import { AgentUpdateOperations } from './diff-engine';
+import { StorageBackendManager, SupabaseStorageBackend } from './storage-backend';
 
 /**
  * DiffApplier applies update operations to agents
@@ -128,17 +130,50 @@ export class DiffApplier {
 
   /**
    * Helper method to add a file to an existing folder
+   * Handles both local files and bucket files (bucket:bucket-name/path format)
    */
-  private async addFileToFolder(folderId: string, filePath: string): Promise<void> {
-    const fullPath = path.resolve(this.basePath, filePath);
-    const fileName = path.basename(filePath);
+  private async addFileToFolder(folderId: string, fileIdentifier: string): Promise<void> {
+    // Check if this is a bucket file
+    if (fileIdentifier.startsWith('bucket:')) {
+      const bucketPath = fileIdentifier.substring(7); // Remove 'bucket:' prefix
+      const [bucket, ...pathParts] = bucketPath.split('/');
+      const filePath = pathParts.join('/');
+      const fileName = pathParts[pathParts.length - 1];
 
-    if (!fs.existsSync(fullPath)) {
-      throw new Error(`File not found: ${fullPath}`);
+      // Initialize storage backend
+      const supabaseBackend = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY
+        ? new SupabaseStorageBackend()
+        : undefined;
+
+      if (!supabaseBackend) {
+        throw new Error('Supabase credentials not configured for bucket file download');
+      }
+
+      const storageManager = new StorageBackendManager({ supabaseBackend });
+      const fileBuffer = await storageManager.downloadBinaryFromBucket({
+        provider: 'supabase',
+        bucket,
+        path: filePath
+      });
+
+      // Write to temp file and upload
+      const tempPath = path.join(os.tmpdir(), fileName);
+      fs.writeFileSync(tempPath, fileBuffer);
+      const fileStream = fs.createReadStream(tempPath);
+      await this.client.uploadFileToFolder(fileStream, folderId, fileName);
+      fs.unlinkSync(tempPath);
+    } else {
+      // Local file
+      const fullPath = path.resolve(this.basePath, fileIdentifier);
+      const fileName = path.basename(fileIdentifier);
+
+      if (!fs.existsSync(fullPath)) {
+        throw new Error(`File not found: ${fullPath}`);
+      }
+
+      const fileStream = fs.createReadStream(fullPath);
+      await this.client.uploadFileToFolder(fileStream, folderId, fileName);
     }
-
-    const fileStream = fs.createReadStream(fullPath);
-    await this.client.uploadFileToFolder(fileStream, folderId, fileName);
   }
 
   /**

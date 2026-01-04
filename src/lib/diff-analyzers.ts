@@ -2,6 +2,24 @@ import { LettaClientWrapper } from './letta-client';
 import { BlockManager } from './block-manager';
 import { normalizeResponse } from './response-normalizer';
 import { ToolDiff, BlockDiff, FolderDiff } from './diff-engine';
+import { FolderFileConfig } from '../types/fleet-config';
+
+// Helper to extract file name from FolderFileConfig (string or from_bucket object)
+function getFileName(fileConfig: FolderFileConfig): string {
+  if (typeof fileConfig === 'string') {
+    return fileConfig.split('/').pop() || fileConfig;
+  }
+  // from_bucket object
+  return fileConfig.from_bucket.path.split('/').pop() || fileConfig.from_bucket.path;
+}
+
+// Helper to get file identifier for comparison
+function getFileIdentifier(fileConfig: FolderFileConfig): string {
+  if (typeof fileConfig === 'string') {
+    return fileConfig;
+  }
+  return `bucket:${fileConfig.from_bucket.bucket}/${fileConfig.from_bucket.path}`;
+}
 
 function hasSourceContent(itemName: string, sourceHashes: Record<string, string>): boolean {
   return !!sourceHashes[itemName];
@@ -112,7 +130,7 @@ export async function analyzeBlockChanges(
 
 export async function analyzeFolderChanges(
   currentFolders: any[],
-  desiredFolders: Array<{ name: string; files: string[]; fileContentHashes?: Record<string, string> }>,
+  desiredFolders: Array<{ name: string; files: FolderFileConfig[]; fileContentHashes?: Record<string, string> }>,
   folderRegistry: Map<string, string>,
   client: LettaClientWrapper
 ): Promise<FolderDiff> {
@@ -150,21 +168,23 @@ export async function analyzeFolderChanges(
           const currentFilesResponse = await client.listFolderFiles(folder.id);
           const currentFiles = normalizeResponse(currentFilesResponse);
           const currentFileNames = new Set(currentFiles.map((f: any) => f.name || f.file_name || String(f)).filter(Boolean));
-          const desiredFileNames = new Set(desiredFolder.files);
+          const desiredFileNames = new Set(desiredFolder.files.map(f => getFileName(f)));
 
           const filesToAdd: string[] = [];
           const filesToRemove: string[] = [];
           const filesToUpdate: string[] = [];
 
           // Find files to add or update
-          for (const filePath of desiredFolder.files) {
-            const fileName = filePath.split('/').pop() || filePath;
+          for (const fileConfig of desiredFolder.files) {
+            const fileName = getFileName(fileConfig);
+            const fileId = getFileIdentifier(fileConfig);
             if (!currentFileNames.has(fileName)) {
-              filesToAdd.push(filePath);
+              filesToAdd.push(fileId);
             } else {
-              if (hasSourceContent(filePath, desiredFolder.fileContentHashes || {})) {
-                console.log(`File ${filePath} has file-based content, checking for updates...`);
-                filesToUpdate.push(filePath);
+              // Only check for updates on local files (strings), not bucket files
+              if (typeof fileConfig === 'string' && hasSourceContent(fileConfig, desiredFolder.fileContentHashes || {})) {
+                console.log(`File ${fileConfig} has file-based content, checking for updates...`);
+                filesToUpdate.push(fileId);
               }
             }
           }

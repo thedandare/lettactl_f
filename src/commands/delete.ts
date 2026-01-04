@@ -99,9 +99,9 @@ async function deleteAllCommandImpl(resource: string, options?: {
     try {
       console.log(`\nDeleting agent: ${agent.name}...`);
       await deleteAgentWithCleanup(client, resolver, agent, allAgents, false);
-      console.log(`✓ Agent ${agent.name} deleted successfully`);
+      console.log(`Agent ${agent.name} deleted successfully`);
     } catch (error: any) {
-      console.error(`✗ Failed to delete agent ${agent.name}: ${error.message}`);
+      console.error(`Failed to delete agent ${agent.name}: ${error.message}`);
     }
   }
   

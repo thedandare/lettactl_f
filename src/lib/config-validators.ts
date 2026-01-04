@@ -372,7 +372,7 @@ export class FoldersValidator {
     if (!Array.isArray(folders)) {
       throw new Error('Folders must be an array.');
     }
-    
+
     folders.forEach((folder, index) => {
       try {
         this.validateFolder(folder);
@@ -381,23 +381,44 @@ export class FoldersValidator {
       }
     });
   }
-  
+
   private static validateFolder(folder: any): void {
     if (!folder || typeof folder !== 'object') {
       throw new Error('Folder must be an object.');
     }
-    
+
     if (!folder.name || typeof folder.name !== 'string' || folder.name.trim() === '') {
       throw new Error('Folder must have a non-empty name.');
     }
-    
+
     if (!folder.files || !Array.isArray(folder.files)) {
       throw new Error(`Folder "${folder.name}" must have a files array.`);
     }
-    
+
     folder.files.forEach((file: any, index: number) => {
-      if (!file || typeof file !== 'string' || file.trim() === '') {
-        throw new Error(`Folder "${folder.name}" file ${index + 1} must be a non-empty string.`);
+      if (!file) {
+        throw new Error(`Folder "${folder.name}" file ${index + 1} cannot be null or undefined.`);
+      }
+
+      if (typeof file === 'string') {
+        // Local file path
+        if (file.trim() === '') {
+          throw new Error(`Folder "${folder.name}" file ${index + 1} must be a non-empty string.`);
+        }
+      } else if (typeof file === 'object' && 'from_bucket' in file) {
+        // from_bucket config
+        BucketConfigValidator.validate(file.from_bucket);
+      } else {
+        throw new Error(
+          `Folder "${folder.name}" file ${index + 1} must be a string (file path) or object with from_bucket.\n` +
+          'Examples:\n' +
+          'files:\n' +
+          '  - files/doc.pdf\n' +
+          '  - from_bucket:\n' +
+          '      provider: supabase\n' +
+          '      bucket: my-bucket\n' +
+          '      path: docs/file.pdf'
+        );
       }
     });
   }
