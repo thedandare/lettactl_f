@@ -724,19 +724,19 @@ For cloud storage support, lettactl can read agent configuration files from Supa
 ```bash
 # Required environment variables
 export SUPABASE_URL=https://your-project.supabase.co
-export SUPABASE_ANON_KEY=sb_publishable_your_anon_key
+
+# For public buckets - use anon key
+export SUPABASE_ANON_KEY=your_anon_key
+
+# For private buckets - use service role key (recommended)
+export SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ```
 
-**Important: Use the ANON key, not the service role key**
-- Go to Supabase Dashboard > Settings > API
-- Copy the "anon public" key (starts with `sb_publishable_...`)
-- Do NOT use the "service role" key for lettactl
+**Choosing the right key:**
+- **SUPABASE_ANON_KEY** - For public buckets or buckets with RLS policies allowing anon access
+- **SUPABASE_SERVICE_ROLE_KEY** - For private buckets (bypasses RLS, recommended for server-side CLI tools)
 
-**Bucket Configuration:**
-
-Your Supabase bucket must be either:
-1. **Public bucket** (recommended for shared configurations)
-2. **Private bucket with RLS policy** allowing anon key access
+If both keys are set, lettactl prefers the service role key.
 
 **Example with cloud storage:**
 
@@ -752,9 +752,28 @@ agents:
       - name: knowledge_base
         from_bucket:
           provider: supabase
-          bucket: my-configs  
+          bucket: my-configs
           path: knowledge/company-info.md
+    folders:
+      - name: documents
+        files:
+          # Single file from bucket
+          - from_bucket:
+              provider: supabase
+              bucket: my-bucket
+              path: docs/manual.pdf
+          # Glob pattern - downloads all matching files
+          - from_bucket:
+              provider: supabase
+              bucket: my-bucket
+              path: docs/guides/*
+          # Mix local and bucket files
+          - local-file.txt
 ```
+
+**Glob patterns in bucket paths:**
+- `path: docs/*` - Downloads all files in the docs/ folder
+- `path: company-id/research/*` - Downloads all files matching the pattern
 
 ## Implementation Notes
 
