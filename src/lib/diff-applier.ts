@@ -141,7 +141,7 @@ export class DiffApplier {
       const fileName = pathParts[pathParts.length - 1];
 
       // Initialize storage backend
-      const supabaseBackend = process.env.SUPABASE_URL && process.env.SUPABASE_ANON_KEY
+      const supabaseBackend = process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
         ? new SupabaseStorageBackend()
         : undefined;
 
