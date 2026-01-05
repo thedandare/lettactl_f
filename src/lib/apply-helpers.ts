@@ -9,7 +9,7 @@ import { FileContentTracker } from './file-content-tracker';
 import { OutputFormatter } from './output-formatter';
 import { createSpinner } from './spinner';
 import { FleetParser } from './fleet-parser';
-import { StorageBackendManager, SupabaseStorageBackend } from './storage-backend';
+import { StorageBackendManager, SupabaseStorageBackend, hasSupabaseConfig } from './storage-backend';
 import { FolderFileConfig } from '../types/fleet-config';
 
 export async function processSharedBlocks(
@@ -39,9 +39,7 @@ let supabaseBackendInstance: SupabaseStorageBackend | undefined = undefined;
 
 function getStorageManager(): StorageBackendManager {
   if (!storageManager) {
-    supabaseBackendInstance = process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
-      ? new SupabaseStorageBackend()
-      : undefined;
+    supabaseBackendInstance = hasSupabaseConfig() ? new SupabaseStorageBackend() : undefined;
     storageManager = new StorageBackendManager({ supabaseBackend: supabaseBackendInstance });
   }
   return storageManager;

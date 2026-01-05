@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { LettaClientWrapper } from './letta-client';
 import { AgentUpdateOperations } from './diff-engine';
-import { StorageBackendManager, SupabaseStorageBackend } from './storage-backend';
+import { StorageBackendManager, SupabaseStorageBackend, hasSupabaseConfig } from './storage-backend';
 
 /**
  * DiffApplier applies update operations to agents
@@ -140,9 +140,7 @@ export class DiffApplier {
       const filePath = pathParts.join('/');
 
       // Initialize storage backend
-      const supabaseBackend = process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)
-        ? new SupabaseStorageBackend()
-        : undefined;
+      const supabaseBackend = hasSupabaseConfig() ? new SupabaseStorageBackend() : undefined;
 
       if (!supabaseBackend) {
         throw new Error('Supabase credentials not configured for bucket file download');

@@ -5,7 +5,7 @@ import { AgentManager } from '../lib/agent-manager';
 import { DiffEngine } from '../lib/diff-engine';
 import { FileContentTracker } from '../lib/file-content-tracker';
 import { getSpinnerEnabled } from '../lib/spinner';
-import { SupabaseStorageBackend } from '../lib/storage-backend';
+import { SupabaseStorageBackend, hasSupabaseConfig } from '../lib/storage-backend';
 import { applyTemplateMode } from './apply-template';
 import { processSharedBlocks, processFolders, updateExistingAgent, createNewAgent } from '../lib/apply-helpers';
 
@@ -27,7 +27,7 @@ export async function applyCommand(options: { file: string; agent?: string; matc
     let supabaseBackend: SupabaseStorageBackend | undefined;
     
     try {
-      if (process.env.SUPABASE_URL && (process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_ROLE_KEY)) {
+      if (hasSupabaseConfig()) {
         supabaseBackend = new SupabaseStorageBackend();
         console.log('Supabase backend configured for cloud storage access');
       }
