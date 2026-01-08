@@ -149,7 +149,7 @@ export async function displayAgentDetails(
         if (fileList.length > 0) {
           const displayFiles = fileList.slice(0, 3);
           for (const file of displayFiles) {
-            console.log(`      - ${file.name || file.filename || file.id}`);
+            console.log(`      - ${file.file_name || file.original_file_name || file.name || file.id}`);
           }
           if (fileList.length > 3) {
             console.log(`      ... and ${fileList.length - 3} more files`);

@@ -13,6 +13,7 @@ import { StorageBackendManager, SupabaseStorageBackend, hasSupabaseConfig } from
 import { FolderFileConfig } from '../types/fleet-config';
 import { isBuiltinTool } from './builtin-tools';
 import { displayAgentDetails } from '../commands/describe';
+import { AgentResolver } from './agent-resolver';
 
 export async function processSharedBlocks(
   config: any,
@@ -284,9 +285,10 @@ export async function createNewAgent(
     sharedBlockIds: Map<string, string>;
     spinnerEnabled: boolean;
     verbose: boolean;
+    folderContentHashes?: Map<string, Record<string, string>>;
   }
 ): Promise<void> {
-  const { client, blockManager, agentManager, toolNameToId, builtinTools, createdFolders, sharedBlockIds, spinnerEnabled, verbose } = context;
+  const { client, blockManager, agentManager, toolNameToId, builtinTools, createdFolders, sharedBlockIds, spinnerEnabled, verbose, folderContentHashes } = context;
 
   const blockIds: string[] = [];
 
@@ -376,10 +378,24 @@ export async function createNewAgent(
       }
     }
 
+    // Store folder file hashes in agent metadata for future change detection
+    if (folderContentHashes && folderContentHashes.size > 0) {
+      const newFolderFileHashes: Record<string, Record<string, string>> = {};
+      for (const [folderName, hashes] of folderContentHashes) {
+        newFolderFileHashes[folderName] = hashes;
+      }
+      await client.updateAgent(createdAgent.id, {
+        metadata: {
+          'lettactl.folderFileHashes': newFolderFileHashes
+        }
+      });
+    }
+
     creationSpinner.succeed(`Agent ${agentName} created successfully`);
 
     // Display agent details
-    const fullAgent = await client.getAgent(createdAgent.id);
+    const resolver = new AgentResolver(client);
+    const fullAgent = await resolver.getAgentWithDetails(createdAgent.id);
     await displayAgentDetails(client, fullAgent, verbose);
   } catch (error) {
     creationSpinner.fail(`Failed to create agent ${agentName}`);

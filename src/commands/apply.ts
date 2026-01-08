@@ -201,7 +201,8 @@ export async function applyCommand(options: { file: string; agent?: string; matc
             createdFolders,
             sharedBlockIds,
             spinnerEnabled,
-            verbose
+            verbose,
+            folderContentHashes
           });
         }
       } catch (error: any) {
