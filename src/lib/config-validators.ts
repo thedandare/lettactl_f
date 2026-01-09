@@ -3,7 +3,6 @@
  * Composition-based validators for different config sections
  */
 
-import { FleetConfig } from '../types/fleet-config';
 import { BucketConfigValidator } from './bucket-config-validator';
 
 /**

@@ -9,4 +9,5 @@ tools/
 prompts/
 shared/
 .env
-.letta
+logs/
+.letta/

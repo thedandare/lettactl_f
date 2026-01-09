@@ -1,0 +1,2 @@
+You are a test agent with system prompt loaded from file.
+Be helpful and concise.

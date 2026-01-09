@@ -1,0 +1,383 @@
+# Updated Fleet Configuration
+# Every agent has at least one change from fleet.yml to test diff detection
+
+shared_blocks:
+  # Updated value
+  - name: e2e-shared-inline
+    description: Shared knowledge with inline value
+    limit: 3000
+    value: |
+      This is UPDATED shared knowledge.
+      The diff engine should detect this change.
+
+  # Updated limit
+  - name: e2e-shared-fromfile
+    description: Shared knowledge from file
+    limit: 2500
+    from_file: block-content.txt
+
+  # Updated version
+  - name: e2e-shared-versioned
+    description: Versioned shared block
+    limit: 2500
+    value: "Versioned content v2"
+    version: "2.0.0"
+
+agents:
+  # ============================================================================
+  # BASIC CONFIGURATIONS - Updated
+  # ============================================================================
+
+  # 1: Updated description
+  - name: e2e-01-minimal
+    description: Minimal config - UPDATED
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Minimal agent.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+
+  # 2: Updated context window
+  - name: e2e-02-prompt-file
+    description: System prompt loaded from file
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      from_file: system-prompt.txt
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 64000
+
+  # 3: Updated system prompt
+  - name: e2e-03-no-base-prompt
+    description: Base Letta instructions disabled
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: |
+        UPDATED: You operate without Letta base instructions.
+        This is your complete system prompt v2.
+      disable_base_prompt: true
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+
+  # 4: Reduced context window
+  - name: e2e-04-large-context
+    description: Maximum context window
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: High context agent.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 180000
+
+  # ============================================================================
+  # MEMORY BLOCKS - Updated
+  # ============================================================================
+
+  # 5: Updated block value
+  - name: e2e-05-block-single
+    description: Single memory block
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with one memory block.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+    memory_blocks:
+      - name: notes
+        description: General notes
+        limit: 2000
+        value: "Updated notes content"
+
+  # 6: Updated block limits + added new block
+  - name: e2e-06-blocks-multi
+    description: Multiple memory blocks
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with multiple memory blocks.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 64000
+    memory_blocks:
+      - name: user_profile
+        description: User information
+        limit: 2500
+        value: "Unknown user"
+      - name: preferences
+        description: User preferences
+        limit: 2000
+        value: "No preferences set"
+      - name: history
+        description: Interaction history
+        limit: 4000
+        value: "New conversation"
+      - name: new_block
+        description: Newly added block
+        limit: 1000
+        value: "New block added in update"
+
+  # 7: Updated block description
+  - name: e2e-07-block-file
+    description: Memory block from file
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with block from file.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+    memory_blocks:
+      - name: file_content
+        description: UPDATED - Content loaded from file
+        limit: 2000
+        from_file: block-content.txt
+
+  # 8: Updated version tag
+  - name: e2e-08-block-versioned
+    description: Versioned memory block
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with versioned block.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+    memory_blocks:
+      - name: versioned_data
+        description: Data with version tracking
+        limit: 2000
+        value: "Data v2"
+        version: "2.0.0"
+
+  # ============================================================================
+  # SHARED BLOCKS - Updated (inherits shared block changes)
+  # ============================================================================
+
+  # 9: System prompt updated
+  - name: e2e-09-shared-single
+    description: Single shared block reference
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with shared block - UPDATED.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+    shared_blocks:
+      - e2e-shared-inline
+
+  # 10: Removed one shared block
+  - name: e2e-10-shared-multi
+    description: Multiple shared block references
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with multiple shared blocks.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 64000
+    shared_blocks:
+      - e2e-shared-inline
+      - e2e-shared-versioned
+
+  # 11: Added another shared block
+  - name: e2e-11-shared-and-memory
+    description: Both shared and memory blocks
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with shared and memory blocks.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 64000
+    shared_blocks:
+      - e2e-shared-inline
+      - e2e-shared-fromfile
+    memory_blocks:
+      - name: private_notes
+        description: Private agent notes
+        limit: 2000
+        value: "Updated private data"
+
+  # ============================================================================
+  # FOLDERS - Updated
+  # ============================================================================
+
+  # 12: Added a file
+  - name: e2e-12-folder-explicit
+    description: Folder with explicit file list
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with explicit folder files.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+    folders:
+      - name: e2e-docs-explicit
+        files:
+          - folder-files/doc1.txt
+          - folder-files/doc2.txt
+          - folder-files/data.json
+
+  # 13: Updated system prompt
+  - name: e2e-13-folder-glob-txt
+    description: Folder with txt glob pattern - UPDATED
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with glob pattern folder - updated.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+    folders:
+      - name: e2e-docs-glob-txt
+        files:
+          - "folder-files/*.txt"
+
+  # 14: Changed to explicit files (no more glob)
+  - name: e2e-14-folder-glob-all
+    description: Folder with explicit files now
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with explicit files instead of glob.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+    folders:
+      - name: e2e-docs-glob-all
+        files:
+          - folder-files/doc1.txt
+
+  # 15: Removed one folder
+  - name: e2e-15-folders-multi
+    description: Single folder now
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with single folder now.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 64000
+    folders:
+      - name: e2e-docs-a
+        files:
+          - folder-files/doc1.txt
+          - folder-files/doc2.txt
+
+  # ============================================================================
+  # TOOLS - Updated
+  # ============================================================================
+
+  # 16: Removed archival_memory_insert
+  - name: e2e-16-tools-archival
+    description: Agent with archival search only
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with archival tools - search only.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+    tools:
+      - archival_memory_search
+
+  # ============================================================================
+  # FULL COMBINATIONS - Updated
+  # ============================================================================
+
+  # 17: Multiple updates
+  - name: e2e-17-full-local
+    description: All local features - UPDATED
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      from_file: system-prompt.txt
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 180000
+    shared_blocks:
+      - e2e-shared-inline
+      - e2e-shared-versioned
+      - e2e-shared-fromfile
+    memory_blocks:
+      - name: working_memory
+        description: Active working memory
+        limit: 5000
+        value: "Updated - Ready"
+      - name: learned_data
+        description: Learned information
+        limit: 3000
+        from_file: block-content.txt
+    folders:
+      - name: e2e-full-docs
+        files:
+          - "folder-files/*.txt"
+    tools:
+      - archival_memory_insert
+      - archival_memory_search
+
+  # 18: Updated context
+  - name: e2e-18-shares-with-09
+    description: Shares block with agent 09
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent sharing block with e2e-09 - updated.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 48000
+    shared_blocks:
+      - e2e-shared-inline
+
+  # 19: Added a file to folder
+  - name: e2e-19-shares-folder
+    description: References same folder pattern
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: Agent with expanded folder.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000
+    folders:
+      - name: e2e-docs-explicit
+        files:
+          - folder-files/doc1.txt
+          - folder-files/doc2.txt
+          - folder-files/data.json
+
+  # 20: Updated everything possible
+  - name: e2e-20-kitchen-sink
+    description: Kitchen sink - UPDATED
+    embedding: openai/text-embedding-3-small
+    system_prompt:
+      value: |
+        UPDATED: You are the ultimate test agent.
+        Every feature is enabled and updated.
+        Version 2 of the kitchen sink.
+      disable_base_prompt: false
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 200000
+    shared_blocks:
+      - e2e-shared-inline
+      - e2e-shared-fromfile
+      - e2e-shared-versioned
+    memory_blocks:
+      - name: core_memory
+        description: Core agent memory - updated
+        limit: 6000
+        value: "Re-initialized v2"
+      - name: file_memory
+        description: Memory from file
+        limit: 4000
+        from_file: block-content.txt
+      - name: versioned_memory
+        description: Versioned memory block
+        limit: 2500
+        value: "v2 data"
+        version: "2.0.0"
+      - name: brand_new_block
+        description: Completely new block
+        limit: 1500
+        value: "Added in update"
+    folders:
+      - name: e2e-kitchen-docs
+        files:
+          - "folder-files/*"
+      - name: e2e-kitchen-extras
+        files:
+          - folder-files/doc1.txt
+    tools:
+      - archival_memory_insert
+      - archival_memory_search

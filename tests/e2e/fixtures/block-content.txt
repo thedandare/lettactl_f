@@ -1,0 +1,2 @@
+This is block content loaded from a file.
+It can contain multiple lines.
