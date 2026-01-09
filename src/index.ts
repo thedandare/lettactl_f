@@ -21,6 +21,7 @@ import { validateCommand } from './commands/validate';
 import { healthCommand } from './commands/health';
 import { filesCommand } from './commands/files';
 import { contextCommand } from './commands/context';
+import { listRunsCommand, getRunCommand, deleteRunCommand } from './commands/runs';
 
 // Global verbose flag for error handling
 let verboseMode = false;
@@ -258,6 +259,30 @@ program
   .description('Show context window token usage breakdown')
   .argument('<agent>', 'agent name')
   .action(contextCommand);
+
+// Runs - manage async job runs
+program
+  .command('runs')
+  .description('List async job runs')
+  .option('--active', 'show only active runs')
+  .option('-a, --agent <name>', 'filter by agent name')
+  .option('-l, --limit <number>', 'limit number of results', parseInt)
+  .action(listRunsCommand);
+
+program
+  .command('run')
+  .description('Get run details')
+  .argument('<run-id>', 'run ID')
+  .option('--wait', 'wait for run to complete')
+  .option('--stream', 'stream run output')
+  .option('--messages', 'show run messages')
+  .action(getRunCommand);
+
+program
+  .command('run-delete')
+  .description('Delete/cancel a run')
+  .argument('<run-id>', 'run ID')
+  .action(deleteRunCommand);
 
 // Global error handler to prevent stack traces from leaking
 process.on('unhandledRejection', (error: any) => {

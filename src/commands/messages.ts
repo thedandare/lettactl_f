@@ -5,8 +5,10 @@ import { OutputFormatter } from '../lib/output-formatter';
 import { createSpinner, getSpinnerEnabled } from '../lib/spinner';
 import { sendMessageToAgent } from '../lib/message-sender';
 
-// Helper function to safely extract content from different message types
-function getMessageContent(message: any): string | null {
+/**
+ * Safely extracts content from different message types
+ */
+export function getMessageContent(message: any): string | null {
   // Try different properties that might contain the message content
   if (message.text) return message.text;
   if (message.content) {

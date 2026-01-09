@@ -2,6 +2,26 @@ import Table from 'cli-table3';
 import { AgentUpdateOperations } from './diff-engine';
 import { isBuiltinTool } from './builtin-tools';
 
+/**
+ * Formats run/job status as bracketed labels
+ */
+export function formatStatus(status: string): string {
+  switch (status) {
+    case 'created':
+      return '[CREATED]';
+    case 'running':
+      return '[RUNNING]';
+    case 'completed':
+      return '[OK]';
+    case 'failed':
+      return '[FAILED]';
+    case 'cancelled':
+      return '[CANCELLED]';
+    default:
+      return `[${status.toUpperCase()}]`;
+  }
+}
+
 export class OutputFormatter {
   /**
    * Formats output based on the specified format
