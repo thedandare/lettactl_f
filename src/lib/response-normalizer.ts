@@ -25,3 +25,10 @@ export function normalizeResponse(response: any): any[] {
   // Fallback: return empty array for unexpected formats
   return [];
 }
+
+/**
+ * Sleep utility for polling and delays
+ */
+export function sleep(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}

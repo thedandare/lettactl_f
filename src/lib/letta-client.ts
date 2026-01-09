@@ -185,6 +185,51 @@ export class LettaClientWrapper {
     return await this.client.agents.messages.compact(agentId);
   }
 
+  // === Run Management ===
+
+  async listRuns(options?: { agentId?: string; active?: boolean; limit?: number }) {
+    return await this.client.runs.list({
+      agent_id: options?.agentId,
+      active: options?.active,
+      limit: options?.limit
+    });
+  }
+
+  async getRun(runId: string) {
+    return await this.client.runs.retrieve(runId);
+  }
+
+  async deleteRun(runId: string) {
+    // SDK doesn't expose delete, call API directly
+    const baseUrl = process.env.LETTA_BASE_URL;
+    const response = await fetch(`${baseUrl}/v1/runs/${runId}`, {
+      method: 'DELETE',
+      headers: this.getAuthHeaders()
+    });
+    if (!response.ok) {
+      throw new Error(`Failed to delete run: ${response.statusText}`);
+    }
+    return response.json();
+  }
+
+  async getRunMessages(runId: string) {
+    return await this.client.runs.messages.list(runId);
+  }
+
+  async streamRun(runId: string) {
+    return await this.client.runs.messages.stream(runId);
+  }
+
+  private getAuthHeaders(): Record<string, string> {
+    const headers: Record<string, string> = {
+      'Content-Type': 'application/json'
+    };
+    if (process.env.LETTA_API_KEY) {
+      headers['Authorization'] = `Bearer ${process.env.LETTA_API_KEY}`;
+    }
+    return headers;
+  }
+
   // === Granular Agent Update Operations ===
   // These methods enable partial updates that preserve conversation history
 
