@@ -4,7 +4,7 @@ import { BlockManager } from '../lib/block-manager';
 import { AgentManager } from '../lib/agent-manager';
 import { DiffEngine } from '../lib/diff-engine';
 import { FileContentTracker } from '../lib/file-content-tracker';
-import { getSpinnerEnabled } from '../lib/spinner';
+import { createSpinner, getSpinnerEnabled } from '../lib/spinner';
 import { SupabaseStorageBackend, hasSupabaseConfig } from '../lib/storage-backend';
 import { applyTemplateMode } from './apply-template';
 import { processSharedBlocks, processFolders, updateExistingAgent, createNewAgent } from '../lib/apply-helpers';
@@ -16,8 +16,10 @@ import { log, warn, isQuietMode } from '../lib/logger';
 export async function applyCommand(options: { file: string; agent?: string; match?: string; dryRun?: boolean; root?: string }, command: any) {
   // Quiet mode overrides verbose
   const verbose = isQuietMode() ? false : (command.parent?.opts().verbose || false);
+  const spinnerEnabled = getSpinnerEnabled(command);
+
   try {
-    log(`Applying configuration from ${options.file}`);
+    const parseSpinner = createSpinner(`Parsing ${options.file}...`, spinnerEnabled).start();
 
     if (options.dryRun) {
       log('Dry-run mode enabled');
@@ -39,12 +41,13 @@ export async function applyCommand(options: { file: string; agent?: string; matc
       throw new Error(`Supabase configuration error: ${error.message}`);
     }
 
-    const parser = new FleetParser(options.file, { 
+    const parser = new FleetParser(options.file, {
       supabaseBackend,
       rootPath: options.root
     });
     const config = await parser.parseFleetConfig(options.file);
-    
+    parseSpinner.succeed(`Parsed ${options.file} (${config.agents.length} agents)`);
+
     if (verbose) log(`Found ${config.agents.length} agents in configuration`);
 
     // Template mode: apply config to existing agents matching pattern
@@ -60,11 +63,13 @@ export async function applyCommand(options: { file: string; agent?: string; matc
     const fileTracker = new FileContentTracker(parser.basePath, parser.storageBackend);
 
     // Load existing resources
+    const loadSpinner = createSpinner('Loading existing resources...', spinnerEnabled).start();
     if (verbose) log('Loading existing blocks...');
     await blockManager.loadExistingBlocks();
 
     if (verbose) log('Loading existing agents...');
     await agentManager.loadExistingAgents();
+    loadSpinner.succeed('Loaded existing resources');
 
     // Dry-run mode: compute and display diffs without applying
     if (options.dryRun) {
@@ -83,7 +88,9 @@ export async function applyCommand(options: { file: string; agent?: string; matc
     }
 
     // Process shared blocks
+    const blockSpinner = createSpinner('Processing shared blocks...', spinnerEnabled).start();
     const sharedBlockIds = await processSharedBlocks(config, blockManager, verbose);
+    blockSpinner.succeed(`Processed ${sharedBlockIds.size} shared blocks`);
 
     // Generate tool source hashes and register tools
     const allToolNames = new Set<string>();
@@ -94,13 +101,17 @@ export async function applyCommand(options: { file: string; agent?: string; matc
     }
     const globalToolSourceHashes = fileTracker.generateToolSourceHashes(Array.from(allToolNames), parser.toolConfigs);
 
+    const toolSpinner = createSpinner('Registering tools...', spinnerEnabled).start();
     if (verbose) log('Registering tools...');
     const { toolNameToId, updatedTools, builtinTools } = await parser.registerRequiredTools(config, client, verbose, globalToolSourceHashes);
+    toolSpinner.succeed(`Registered ${Object.keys(toolNameToId).length} tools`);
 
     // Register MCP servers
     if (config.mcp_servers && config.mcp_servers.length > 0) {
+      const mcpSpinner = createSpinner('Registering MCP servers...', spinnerEnabled).start();
       if (verbose) log('Registering MCP servers...');
       const mcpResult = await parser.registerMcpServers(config, client, verbose);
+      mcpSpinner.succeed(`Registered ${config.mcp_servers.length} MCP servers`);
 
       // Display MCP server operation summary
       if (mcpResult.created.length > 0) {
@@ -118,16 +129,15 @@ export async function applyCommand(options: { file: string; agent?: string; matc
     }
 
     // Process folders
+    const folderSpinner = createSpinner('Processing folders...', spinnerEnabled).start();
     const createdFolders = await processFolders(config, client, parser, options, verbose);
+    folderSpinner.succeed(`Processed ${Object.keys(createdFolders).length} folders`);
 
     // Process agents
-    const spinnerEnabled = getSpinnerEnabled(command);
     if (verbose) log('Processing agents...');
 
     for (const agent of config.agents) {
       if (options.agent && !agent.name.includes(options.agent)) continue;
-
-      log(`Processing agent: ${agent.name}`);
       if (verbose) {
         log(`  Description: ${agent.description}`);
         log(`  Tools: ${agent.tools?.join(', ') || 'none'}`);
@@ -176,7 +186,7 @@ export async function applyCommand(options: { file: string; agent?: string; matc
           // Check if changes needed
           const changes = agentManager.getConfigChanges(existingAgent, agentConfig);
           if (!changes.hasChanges) {
-            log(`Agent ${agent.name} already exists and is up to date`);
+            log(`Agent ${agent.name} already up to date`);
             continue;
           }
 
