@@ -1,5 +1,6 @@
 import { LettaClientWrapper } from '../lib/letta-client';
 import { AgentResolver } from '../lib/agent-resolver';
+import { OutputFormatter } from '../lib/output-formatter';
 
 interface AgentFile {
   id: string;
@@ -11,7 +12,7 @@ interface AgentFile {
   last_accessed_at: string;
 }
 
-export async function filesCommand(agentName: string, _options: {}, command: any) {
+export async function filesCommand(agentName: string, options: { output?: string }, command: any) {
   const verbose = command.parent?.opts().verbose || false;
   const client = new LettaClientWrapper();
   const resolver = new AgentResolver(client);
@@ -34,6 +35,10 @@ export async function filesCommand(agentName: string, _options: {}, command: any
 
   const data = await response.json() as { files: AgentFile[] };
   const files = data.files || [];
+
+  if (OutputFormatter.handleJsonOutput(files, options.output)) {
+    return;
+  }
 
   console.log(`Files for agent: ${agentName}`);
   console.log('='.repeat(40));

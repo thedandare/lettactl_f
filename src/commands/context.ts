@@ -1,5 +1,6 @@
 import { AgentResolver } from '../lib/agent-resolver';
 import { LettaClientWrapper } from '../lib/letta-client';
+import { OutputFormatter } from '../lib/output-formatter';
 
 interface ContextWindow {
   context_window_size_max: number;
@@ -15,7 +16,7 @@ interface ContextWindow {
   num_tokens_messages: number;
 }
 
-export async function contextCommand(agentName: string, _options: {}, command: any) {
+export async function contextCommand(agentName: string, options: { output?: string }, command: any) {
   const verbose = command.parent?.opts().verbose || false;
   const client = new LettaClientWrapper();
   const resolver = new AgentResolver(client);
@@ -37,6 +38,10 @@ export async function contextCommand(agentName: string, _options: {}, command: a
   }
 
   const ctx = await response.json() as ContextWindow;
+
+  if (OutputFormatter.handleJsonOutput(ctx, options.output)) {
+    return;
+  }
 
   console.log(`Context Window: ${agentName}`);
   console.log('='.repeat(40));

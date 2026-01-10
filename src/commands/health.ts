@@ -1,8 +1,46 @@
 import { LettaClientWrapper } from '../lib/letta-client';
+import { OutputFormatter } from '../lib/output-formatter';
 
-export async function healthCommand(_options: {}, command: any) {
+export async function healthCommand(options: { output?: string }, command: any) {
   const verbose = command.parent?.opts().verbose || false;
   const baseUrl = process.env.LETTA_BASE_URL;
+
+  // For JSON output, return structured data
+  if (options.output === 'json') {
+    const result: any = {
+      server_url: baseUrl || null,
+      status: 'unknown',
+      version: null,
+      error: null
+    };
+
+    if (!baseUrl) {
+      result.status = 'error';
+      result.error = 'LETTA_BASE_URL not set';
+      OutputFormatter.handleJsonOutput(result, 'json');
+      process.exit(1);
+    }
+
+    try {
+      const response = await fetch(`${baseUrl}/v1/health/`);
+      if (!response.ok) {
+        result.status = 'error';
+        result.error = `Server returned ${response.status}`;
+        OutputFormatter.handleJsonOutput(result, 'json');
+        process.exit(1);
+      }
+      const health = await response.json() as { status: string; version: string };
+      result.status = health.status;
+      result.version = health.version;
+      OutputFormatter.handleJsonOutput(result, 'json');
+      return;
+    } catch (error: any) {
+      result.status = 'error';
+      result.error = error.cause?.code || error.code || error.message;
+      OutputFormatter.handleJsonOutput(result, 'json');
+      process.exit(1);
+    }
+  }
 
   console.log('Letta Server Health Check');
   console.log('==========================\n');

@@ -250,6 +250,7 @@ program
 program
   .command('health')
   .description('Check Letta server connectivity and status')
+  .option('-o, --output <format>', 'output format (table|json)', 'table')
   .action(healthCommand);
 
 // Files - show agent file state
@@ -257,6 +258,7 @@ program
   .command('files')
   .description('Show attached files and their open/closed state')
   .argument('<agent>', 'agent name')
+  .option('-o, --output <format>', 'output format (table|json)', 'table')
   .action(filesCommand);
 
 // Context - show context window usage
@@ -264,6 +266,7 @@ program
   .command('context')
   .description('Show context window token usage breakdown')
   .argument('<agent>', 'agent name')
+  .option('-o, --output <format>', 'output format (table|json)', 'table')
   .action(contextCommand);
 
 // Runs - manage async job runs
@@ -273,6 +276,7 @@ program
   .option('--active', 'show only active runs')
   .option('-a, --agent <name>', 'filter by agent name')
   .option('-l, --limit <number>', 'limit number of results', parseInt)
+  .option('-o, --output <format>', 'output format (table|json)', 'table')
   .action(listRunsCommand);
 
 program
@@ -282,6 +286,7 @@ program
   .option('--wait', 'wait for run to complete')
   .option('--stream', 'stream run output')
   .option('--messages', 'show run messages')
+  .option('-o, --output <format>', 'output format (table|json)', 'table')
   .action(getRunCommand);
 
 program

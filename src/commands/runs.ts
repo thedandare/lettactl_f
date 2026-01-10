@@ -1,12 +1,12 @@
 import { LettaClientWrapper } from '../lib/letta-client';
 import { AgentResolver } from '../lib/agent-resolver';
 import { normalizeResponse, sleep } from '../lib/response-normalizer';
-import { formatStatus } from '../lib/output-formatter';
+import { formatStatus, OutputFormatter } from '../lib/output-formatter';
 import { getMessageContent } from './messages';
 import { Run } from '../types/run';
 
 export async function listRunsCommand(
-  options: { active?: boolean; agent?: string; limit?: number },
+  options: { active?: boolean; agent?: string; limit?: number; output?: string },
   command: any
 ) {
   const verbose = command.parent?.opts().verbose || false;
@@ -26,6 +26,10 @@ export async function listRunsCommand(
   });
 
   const runs = normalizeResponse(runsResponse) as Run[];
+
+  if (OutputFormatter.handleJsonOutput(runs, options.output)) {
+    return;
+  }
 
   if (runs.length === 0) {
     console.log('No runs found.');
@@ -66,7 +70,7 @@ export async function listRunsCommand(
 
 export async function getRunCommand(
   runId: string,
-  options: { wait?: boolean; stream?: boolean; messages?: boolean },
+  options: { wait?: boolean; stream?: boolean; messages?: boolean; output?: string },
   command: any
 ) {
   const verbose = command.parent?.opts().verbose || false;
@@ -83,12 +87,16 @@ export async function getRunCommand(
   }
 
   if (options.messages) {
-    await showRunMessages(client, runId);
+    await showRunMessages(client, runId, options.output);
     return;
   }
 
   // Default: show run details
   const run = await client.getRun(runId) as Run;
+
+  if (OutputFormatter.handleJsonOutput(run, options.output)) {
+    return;
+  }
 
   console.log(`Run: ${run.id}`);
   console.log('='.repeat(50));
@@ -180,9 +188,13 @@ async function streamRun(client: LettaClientWrapper, runId: string) {
   await waitForRun(client, runId, false);
 }
 
-async function showRunMessages(client: LettaClientWrapper, runId: string) {
+async function showRunMessages(client: LettaClientWrapper, runId: string, outputFormat?: string) {
   const messagesResponse = await client.getRunMessages(runId);
   const messages = normalizeResponse(messagesResponse);
+
+  if (OutputFormatter.handleJsonOutput(messages, outputFormat)) {
+    return;
+  }
 
   if (messages.length === 0) {
     console.log('No messages.');
