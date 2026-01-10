@@ -1,0 +1,12 @@
+# Invalid configurations for negative testing
+# Each agent tests a specific validation error
+
+agents:
+  # Missing embedding (required for self-hosted)
+  - name: e2e-invalid-no-embedding
+    description: Agent missing embedding field
+    system_prompt:
+      value: This agent has no embedding configured.
+    llm_config:
+      model: google_ai/gemini-2.5-pro
+      context_window: 32000

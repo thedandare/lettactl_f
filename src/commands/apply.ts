@@ -48,6 +48,25 @@ export async function applyCommand(options: { file: string; agent?: string; matc
     const config = await parser.parseFleetConfig(options.file);
     parseSpinner.succeed(`Parsed ${options.file} (${config.agents.length} agents)`);
 
+    // Validate embedding configuration for self-hosted environments
+    const isSelfHosted = !process.env.LETTA_BASE_URL?.includes('letta.com');
+    if (isSelfHosted) {
+      const agentsWithoutEmbedding = config.agents.filter((agent: any) => !agent.embedding);
+      if (agentsWithoutEmbedding.length > 0) {
+        const names = agentsWithoutEmbedding.map((a: any) => a.name).join(', ');
+        throw new Error(
+          `Self-hosted Letta requires explicit embedding configuration.\n` +
+          `Agents missing embedding: ${names}\n\n` +
+          `Add an embedding field to each agent:\n` +
+          `  embedding: "openai/text-embedding-3-small"\n\n` +
+          `Common embedding providers:\n` +
+          `  - openai/text-embedding-3-small\n` +
+          `  - openai/text-embedding-3-large\n` +
+          `  - openai/text-embedding-ada-002`
+        );
+      }
+    }
+
     if (verbose) log(`Found ${config.agents.length} agents in configuration`);
 
     // Template mode: apply config to existing agents matching pattern

@@ -148,6 +148,25 @@ else
 fi
 
 # ============================================================================
+# Test: Invalid Configs (should fail)
+# ============================================================================
+
+section "Invalid Config Validation"
+
+# Self-hosted without embedding should fail
+if $CLI apply -f "$FIXTURES/fleet-invalid.yml" --dry-run > $OUT 2>&1; then
+    fail "fleet-invalid.yml should have failed (missing embedding)"
+    cat $OUT
+else
+    if output_contains "Self-hosted Letta requires explicit embedding"; then
+        pass "Missing embedding rejected on self-hosted"
+    else
+        fail "Wrong error for missing embedding"
+        cat $OUT
+    fi
+fi
+
+# ============================================================================
 # Test: Dry Run (should show creates)
 # ============================================================================
 
