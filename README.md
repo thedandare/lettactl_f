@@ -1,10 +1,10 @@
 # LettaCTL
 
-![LettaCTL](assets/main.png)
-
 [![CI](https://github.com/nouamanecodes/lettactl/actions/workflows/ci.yml/badge.svg)](https://github.com/nouamanecodes/lettactl/actions)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-007ACC?style=flat&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+
+![LettaCTL](assets/main.png)
 
 > **Need help?** Join the [Letta Discord](https://discord.com/invite/letta) for support and discussions.
 
