@@ -54,15 +54,19 @@ export const CORE_MEMORY_TOOLS = [
 
 /**
  * Core tools that should never be removed from an agent.
- * These are critical for agent memory and conversation operations.
+ * These are critical for agent memory, conversation, and file operations.
  * @see https://github.com/nouamanecodes/lettactl/issues/130
+ * @see https://github.com/nouamanecodes/lettactl/issues/137
  */
 export const PROTECTED_MEMORY_TOOLS = new Set([
   'memory_insert',
   'memory_replace',
   'memory_rethink',
   'memory',
-  'conversation_search'
+  'conversation_search',
+  'open_files',
+  'grep_files',
+  'semantic_search_files'
 ]);
 
 /**

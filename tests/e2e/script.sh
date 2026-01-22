@@ -726,16 +726,16 @@ fi
 $CLI delete agent e2e-force-test --force > /dev/null 2>&1 || true
 
 # ============================================================================
-# Test: Protected Memory Tools (#130)
+# Test: Protected Memory and File Tools (#130, #137)
 # ============================================================================
 
-section "Protected Memory Tools (#130)"
+section "Protected Memory and File Tools (#130, #137)"
 
 # Cleanup any existing test agent
 $CLI delete agent e2e-memory-tools-test --force > /dev/null 2>&1 || true
 
-# Create agent with all memory tools
-info "Creating agent with memory tools..."
+# Create agent with all memory and file tools
+info "Creating agent with memory and file tools..."
 if $CLI apply -f "$FIXTURES/fleet-memory-tools-test.yml" > $OUT 2>&1; then
     pass "Created memory tools test agent"
 else
@@ -760,9 +760,20 @@ if output_contains "memory_rethink"; then
 else
     fail "memory_rethink not attached"
 fi
+# Verify file tools are attached (#137)
+if output_contains "open_files"; then
+    pass "open_files attached"
+else
+    fail "open_files not attached"
+fi
+if output_contains "grep_files"; then
+    pass "grep_files attached"
+else
+    fail "grep_files not attached"
+fi
 
-# Apply reduced config that doesn't list memory tools (no --force)
-info "Applying config WITHOUT memory tools listed (no --force)..."
+# Apply reduced config that doesn't list memory/file tools (no --force)
+info "Applying config WITHOUT memory/file tools listed (no --force)..."
 $CLI apply -f "$FIXTURES/fleet-memory-tools-reduced.yml" > $OUT 2>&1
 
 # All protected tools should remain
@@ -786,6 +797,17 @@ if output_contains "conversation_search"; then
     pass "conversation_search preserved"
 else
     fail "conversation_search incorrectly removed"
+fi
+# File tools should also be preserved (#137)
+if output_contains "open_files"; then
+    pass "open_files preserved"
+else
+    fail "open_files incorrectly removed"
+fi
+if output_contains "grep_files"; then
+    pass "grep_files preserved"
+else
+    fail "grep_files incorrectly removed"
 fi
 
 # With --force: ALL protected tools should STILL stay
@@ -812,6 +834,17 @@ if output_contains "conversation_search"; then
     pass "conversation_search preserved with --force"
 else
     fail "conversation_search removed despite being protected"
+fi
+# File tools with --force (#137)
+if output_contains "open_files"; then
+    pass "open_files preserved with --force"
+else
+    fail "open_files removed despite being protected"
+fi
+if output_contains "grep_files"; then
+    pass "grep_files preserved with --force"
+else
+    fail "grep_files removed despite being protected"
 fi
 
 # Cleanup
