@@ -95,20 +95,34 @@ describe('messages commands', () => {
   });
 
   describe('sendMessageCommand', () => {
-    it('should send a message to an agent', async () => {
+    it('should send a message to an agent with --sync flag', async () => {
       const mockAgent = { id: 'agent-123', name: 'test-agent' };
       const mockResponse = {
-        id: 'msg-123',
-        text: 'Response from agent'
+        messages: [{ message_type: 'assistant_message', text: 'Response from agent' }]
       };
 
       mockResolver.findAgentByName.mockResolvedValue({ agent: mockAgent, allAgents: [] });
       mockClient.createMessage.mockResolvedValue(mockResponse as any);
 
-      await sendMessageCommand('test-agent', 'Hello agent', {}, mockCommand);
+      await sendMessageCommand('test-agent', 'Hello agent', { sync: true }, mockCommand);
 
       expect(mockResolver.findAgentByName).toHaveBeenCalledWith('test-agent');
       expect(mockClient.createMessage).toHaveBeenCalledWith('agent-123', {
+        messages: [{ role: 'user', content: 'Hello agent' }]
+      });
+      expect(mockConsoleLog).toHaveBeenCalled();
+    });
+
+    it('should send async message and return run ID with --no-wait', async () => {
+      const mockAgent = { id: 'agent-123', name: 'test-agent' };
+      const mockRunResponse = { id: 'run-456', status: 'pending' };
+
+      mockResolver.findAgentByName.mockResolvedValue({ agent: mockAgent, allAgents: [] });
+      mockClient.createAsyncMessage.mockResolvedValue(mockRunResponse as any);
+
+      await sendMessageCommand('test-agent', 'Hello agent', { noWait: true }, mockCommand);
+
+      expect(mockClient.createAsyncMessage).toHaveBeenCalledWith('agent-123', {
         messages: [{ role: 'user', content: 'Hello agent' }]
       });
       expect(mockConsoleLog).toHaveBeenCalled();
