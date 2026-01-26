@@ -1,0 +1,11 @@
+E2E Test Document 1
+====================
+
+This is a test document for e2e testing of lettactl folder attachments.
+
+Content:
+- Section A: Test content for section A
+- Section B: Test content for section B
+- Section C: Test content for section C
+
+This document is used to verify that file uploads work correctly.

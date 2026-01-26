@@ -1,0 +1,11 @@
+E2E Test Document 2
+====================
+
+This is another test document for e2e testing.
+
+Additional content:
+1. First item
+2. Second item
+3. Third item
+
+Used to test multiple file uploads to the same folder.
