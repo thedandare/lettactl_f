@@ -11,7 +11,7 @@ description: Use when releasing features - covers issues, branches, tests, commi
 4. **E2E Test** - Write test in `tests/e2e/tests/`
 5. **README** - Update if feature changes CLI usage or adds commands
 6. **Commit** - Conventional commit format
-7. **PR** - Create, merge, delete branch
+7. **PR** - Create, merge, delete branch, close issue
 8. **Version** - Bump package.json, tag, release
 9. **Roadmap** - Update issue #2 with completed feature
 
@@ -128,7 +128,12 @@ gh pr create --fill
 
 # Merge and delete branch (use --admin to bypass branch protection)
 gh pr merge --squash --delete-branch --admin
+
+# Close the issue
+gh issue close <issue-number>
 ```
+
+Always close the related issue after merging the PR.
 
 ## Git Safety
 
@@ -184,6 +189,7 @@ Format: `- [x] Feature description (#issue-number)`
 | Run all CLI tests | `./tests/e2e/script.sh` |
 | Create PR | `gh pr create --fill` |
 | Merge PR | `gh pr merge --squash --delete-branch --admin` |
+| Close issue | `gh issue close <number>` |
 | Tag release | `git tag vX.X.X && git push --tags` |
 | Publish release | `gh release create vX.X.X --generate-notes` |
 | Update roadmap | `gh issue edit 2 --body "..."` |
