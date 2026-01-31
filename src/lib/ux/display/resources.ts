@@ -208,6 +208,77 @@ function displayBlocksPlain(blocks: BlockData[]): string {
 }
 
 // ============================================================================
+// Archive Display
+// ============================================================================
+
+export interface ArchiveData {
+  name: string;
+  id: string;
+  embedding?: string;
+  agentCount?: number;
+}
+
+export function displayArchives(archives: ArchiveData[]): string {
+  if (!shouldUseFancyUx()) {
+    return displayArchivesPlain(archives);
+  }
+
+  const rows: string[] = [];
+  const maxNameLen = Math.max(...archives.map(a => a.name.length), 4);
+  const nameW = maxNameLen + 1;
+  const embedW = 24;
+  const baseWidth = 64;
+  const width = baseWidth + nameW;
+
+  for (const archive of archives) {
+    const name = archive.name;
+    const id = truncate(archive.id, 26);
+    const embedding = truncate(archive.embedding || '-', embedW - 1).padEnd(embedW);
+    const agents = archive.agentCount !== undefined ? archive.agentCount.toString().padStart(6) : '     -';
+
+    const row = STATUS.ok + '  ' +
+      chalk.white(name.padEnd(nameW)) + '  ' +
+      chalk.dim(id.padEnd(28)) + '  ' +
+      chalk.cyan(embedding) + '  ' +
+      chalk.white(agents);
+
+    rows.push(row);
+  }
+
+  const header = '   ' +
+    chalk.dim('NAME'.padEnd(nameW)) + '  ' +
+    chalk.dim('ID'.padEnd(28)) + '  ' +
+    chalk.dim('EMBEDDING'.padEnd(embedW)) + '  ' +
+    chalk.dim('AGENTS');
+
+  const boxLines = createBoxWithRows(`Archives (${archives.length})`, [header, ...rows], width);
+  return boxLines.join('\n');
+}
+
+function displayArchivesPlain(archives: ArchiveData[]): string {
+  const lines: string[] = [];
+
+  const maxNameLen = Math.max(...archives.map(a => a.name.length), 4);
+  const nameW = maxNameLen + 1;
+  const embedW = 24;
+
+  const header = 'NAME'.padEnd(nameW) + '  ID'.padEnd(30) + '  EMBEDDING'.padEnd(embedW + 2) + '  AGENTS';
+  lines.push(header);
+  lines.push('-'.repeat(header.length));
+
+  for (const archive of archives) {
+    const name = archive.name.padEnd(nameW);
+    const id = truncate(archive.id, 26).padEnd(28);
+    const embedding = truncate(archive.embedding || '-', embedW - 1).padEnd(embedW);
+    const agents = archive.agentCount !== undefined ? archive.agentCount.toString().padStart(6) : '     -';
+
+    lines.push(`${name}  ${id}  ${embedding}  ${agents}`);
+  }
+
+  return lines.join('\n');
+}
+
+// ============================================================================
 // Tool Display
 // ============================================================================
 

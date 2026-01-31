@@ -13,6 +13,7 @@ import { getFolders } from './folders';
 import { getFiles } from './files';
 import { getMcpServers } from './mcp-servers';
 import { getArchival } from './archival';
+import { getArchives } from './archives';
 
 async function getCommandImpl(resource: string, name?: string, options?: GetOptions, command?: any) {
   validateResourceType(resource, SUPPORTED_RESOURCES);
@@ -88,6 +89,9 @@ async function getCommandImpl(resource: string, name?: string, options?: GetOpti
       break;
     case 'archival':
       await getArchival(client, resolver, options, spinnerEnabled, agentId, agentName);
+      break;
+    case 'archives':
+      await getArchives(client, resolver, options, spinnerEnabled, agentId);
       break;
   }
 }

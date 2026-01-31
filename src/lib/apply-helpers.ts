@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as os from 'os';
 import { LettaClientWrapper } from './letta-client';
 import { BlockManager } from './block-manager';
+import { ArchiveManager } from './archive-manager';
 import { AgentManager, AgentVersion } from './agent-manager';
 import { DiffEngine } from './diff-engine';
 import { FileContentTracker } from './file-content-tracker';
@@ -151,6 +152,9 @@ export async function processFolders(
 
         if (!folder) {
           if (verbose) log(`Creating folder: ${folderConfig.name}`);
+          if (!agent.embedding) {
+            throw new Error(`Folder "${folderConfig.name}" requires an embedding handle. Set agent.embedding to a valid model handle.`);
+          }
           folder = await client.createFolder({
             name: folderConfig.name,
             embedding: agent.embedding || DEFAULT_EMBEDDING
@@ -212,6 +216,7 @@ export async function updateExistingAgent(
     builtinTools: Set<string>;
     createdFolders: Map<string, string>;
     sharedBlockIds: Map<string, string>;
+    archiveManager: ArchiveManager;
     spinnerEnabled: boolean;
     verbose: boolean;
     force: boolean;
@@ -276,6 +281,7 @@ export async function createNewAgent(
   context: {
     client: LettaClientWrapper;
     blockManager: BlockManager;
+    archiveManager: ArchiveManager;
     agentManager: AgentManager;
     toolNameToId: Map<string, string>;
     builtinTools: Set<string>;
@@ -285,8 +291,8 @@ export async function createNewAgent(
     verbose: boolean;
     folderContentHashes?: Map<string, Record<string, string>>;
   }
-): Promise<void> {
-  const { client, blockManager, agentManager, toolNameToId, builtinTools, createdFolders, sharedBlockIds, spinnerEnabled, verbose, folderContentHashes } = context;
+): Promise<{ id: string; name: string }> {
+  const { client, blockManager, archiveManager, agentManager, toolNameToId, builtinTools, createdFolders, sharedBlockIds, spinnerEnabled, verbose, folderContentHashes } = context;
 
   const blockIds: string[] = [];
 
@@ -312,6 +318,36 @@ export async function createNewAgent(
     }
   }
 
+  const archiveEmbeddingDefault = agent.embedding;
+
+  // Create or resolve archives
+  const archiveIds: string[] = [];
+  if (agent.archives) {
+    for (const archive of agent.archives) {
+      const archivePayload: {
+        name: string;
+        description?: string;
+        embedding?: string;
+        embedding_config?: Record<string, any>;
+      } = {
+        name: archive.name,
+        description: archive.description,
+        embedding_config: archive.embedding_config,
+      };
+      if (archive.embedding) {
+        archivePayload.embedding = archive.embedding;
+      } else if (!archive.embedding_config) {
+        if (!archiveEmbeddingDefault) {
+          throw new Error(`Archive "${archive.name}" requires an embedding handle. Set archive.embedding or agent.embedding.`);
+        }
+        archivePayload.embedding = archiveEmbeddingDefault;
+      }
+
+      const archiveId = await archiveManager.getOrCreateArchive(archivePayload);
+      archiveIds.push(archiveId);
+    }
+  }
+
   const creationSpinner = createSpinner(`Creating agent ${agentName}...`, spinnerEnabled).start();
 
   try {
@@ -328,16 +364,24 @@ export async function createNewAgent(
       }
     }
 
-    const createdAgent = await client.createAgent({
+    const createPayload: any = {
       name: agentName,
       description: agent.description || '',
       model: agent.llm_config?.model || DEFAULT_MODEL,
-      embedding: agent.embedding || DEFAULT_EMBEDDING,
       system: agent.system_prompt.value || '',
       block_ids: blockIds,
       context_window_limit: agent.llm_config?.context_window || DEFAULT_CONTEXT_WINDOW,
       reasoning: agent.reasoning ?? DEFAULT_REASONING
-    });
+    };
+
+    // Handle embedding vs embedding_config (mutually exclusive)
+    if (agent.embedding_config) {
+      createPayload.embedding_config = agent.embedding_config;
+    } else {
+      createPayload.embedding = agent.embedding || DEFAULT_EMBEDDING;
+    }
+
+    const createdAgent = await client.createAgent(createPayload);
 
     // Attach tools
     for (const toolName of agent.tools || []) {
@@ -349,12 +393,19 @@ export async function createNewAgent(
       }
     }
 
+    // Attach archives
+    for (const archiveId of archiveIds) {
+      if (verbose) log(`  Attaching archive: ${archiveId}`);
+      await client.attachArchiveToAgent(createdAgent.id, archiveId);
+    }
+
     // Update registry
     agentManager.updateRegistry(agentName, {
       systemPrompt: agent.system_prompt.value || '',
       tools: agent.tools || [],
       model: agent.llm_config?.model,
       embedding: agent.embedding,
+      embeddingConfig: agent.embedding_config,
       contextWindow: agent.llm_config?.context_window,
       memoryBlocks: (agent.memory_blocks || []).map((block: any) => ({
         name: block.name,
@@ -363,6 +414,7 @@ export async function createNewAgent(
         value: block.value || '',
         mutable: block.mutable
       })),
+      archives: agent.archives || [],
       folders: agent.folders || [],
       sharedBlocks: agent.shared_blocks || []
     }, createdAgent.id);
@@ -437,6 +489,8 @@ export async function createNewAgent(
         if (firstMsgSpinner) firstMsgSpinner.fail(`First message failed: ${err.message}`);
       }
     }
+
+    return { id: createdAgent.id, name: createdAgent.name };
   } catch (err) {
     creationSpinner.fail(`Failed to create agent ${agentName}`);
     throw err;

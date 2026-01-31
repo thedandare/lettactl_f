@@ -2,6 +2,7 @@
 export {
   displayAgents, AgentData,
   displayBlocks, BlockData,
+  displayArchives, ArchiveData,
   displayTools, ToolData,
   displayFolders, FolderData,
   displayMcpServers, McpServerData,
@@ -18,6 +19,7 @@ export { displayArchival, displayArchivalContents, ArchivalEntryData } from './a
 export {
   displayAgentDetails, AgentDetailsData,
   displayBlockDetails, BlockDetailsData,
+  displayArchiveDetails, ArchiveDetailsData,
   displayToolDetails, ToolDetailsData,
   displayFolderDetails, FolderDetailsData,
   displayFileDetails, FileDetailsData,

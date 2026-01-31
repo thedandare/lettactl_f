@@ -1,4 +1,4 @@
-export const SUPPORTED_RESOURCES = ['blocks', 'folders', 'all'];
+export const SUPPORTED_RESOURCES = ['blocks', 'folders', 'archives', 'all'];
 
 export interface CleanupOptions {
   force?: boolean;

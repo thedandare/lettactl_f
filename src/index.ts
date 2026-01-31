@@ -104,13 +104,14 @@ program
   .option('--dry-run', 'show what would be created without making changes')
   .option('--force', 'remove resources not in config (strict reconciliation)')
   .option('--root <path>', 'root directory for resolving file paths')
+  .option('--manifest <path>', 'write agent manifest to path (default: <config>.manifest.json)')
   .action(applyCommand);
 
 // Get command - list resources
 program
   .command('get')
-  .description('Display resources (agents, blocks, tools, folders, files, mcp-servers, archival)')
-  .argument('<resource>', 'resource type (agents|blocks|tools|folders|files|mcp-servers|archival)')
+  .description('Display resources (agents, blocks, archives, tools, folders, files, mcp-servers, archival)')
+  .argument('<resource>', 'resource type (agents|blocks|archives|tools|folders|files|mcp-servers|archival)')
   .argument('[name]', 'specific resource name (optional)')
   .option('-o, --output <format>', 'output format (table|json|yaml)', 'table')
   .option('-a, --agent <name>', 'filter by agent name (for blocks, tools, folders)')
@@ -125,7 +126,7 @@ program
 program
   .command('describe')
   .description('Show detailed information about a resource')
-  .argument('<resource>', 'resource type (agent|block|tool|folder|file|mcp-servers)')
+  .argument('<resource>', 'resource type (agent|block|archive|tool|folder|file|mcp-servers)')
   .argument('<name>', 'resource name')
   .option('-o, --output <format>', 'output format (table, json)', 'table')
   .action(describeCommand);
@@ -143,7 +144,7 @@ program
 program
   .command('delete-all')
   .description('Delete multiple resources (with optional pattern matching)')
-  .argument('<resource>', 'resource type (agents|folders|blocks|tools|mcp-servers)')
+  .argument('<resource>', 'resource type (agents|folders|blocks|archives|tools|mcp-servers)')
   .option('--pattern <pattern>', 'regex pattern to match resource names/IDs')
   .option('--force', 'force deletion without confirmation')
   .action(deleteAllCommand);
@@ -152,7 +153,7 @@ program
 program
   .command('cleanup')
   .description('Delete orphaned resources (blocks, folders not attached to any agent)')
-  .argument('<resource>', 'resource type (blocks|folders|all)')
+  .argument('<resource>', 'resource type (blocks|folders|archives|all)')
   .option('--force', 'actually delete (default is dry-run)')
   .option('--dry-run', 'show what would be deleted without deleting')
   .action(cleanupCommand);

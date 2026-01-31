@@ -1,6 +1,7 @@
 import chalk from 'chalk';
 import { LettaClientWrapper } from './letta-client';
 import { BlockManager } from './block-manager';
+import { ArchiveManager } from './archive-manager';
 import { AgentManager } from './agent-manager';
 import { DiffEngine, AgentUpdateOperations } from './diff-engine';
 import { FileContentTracker } from './file-content-tracker';
@@ -9,6 +10,7 @@ import { output } from './logger';
 import { displayDryRunSeparator, displayDryRunSummary, displayDryRunAction } from './ux/display';
 import { shouldUseFancyUx, truncate } from './ux/box';
 import { purple } from './ux/constants';
+import { buildMcpServerRegistry, expandMcpToolsForAgents } from './mcp-tools';
 
 export interface DryRunResult {
   name: string;
@@ -20,6 +22,7 @@ export interface DryRunResult {
 interface DryRunContext {
   client: LettaClientWrapper;
   blockManager: BlockManager;
+  archiveManager: ArchiveManager;
   agentManager: AgentManager;
   diffEngine: DiffEngine;
   fileTracker: FileContentTracker;
@@ -41,6 +44,8 @@ export async function computeDryRunDiffs(
   const toolNameToId = await buildToolRegistry(client);
   const folderNameToId = await buildFolderRegistry(client);
   const sharedBlockIds = buildSharedBlockRegistry(config, blockManager);
+  const mcpServerNameToId = await buildMcpServerRegistry(client);
+  await expandMcpToolsForAgents(config, client, mcpServerNameToId, ctx.verbose);
 
   const results: DryRunResult[] = [];
 
@@ -122,6 +127,7 @@ async function computeAgentDiff(
     toolSourceHashes,
     model: agent.llm_config?.model,
     embedding: agent.embedding,
+    embeddingConfig: agent.embedding_config,
     contextWindow: agent.llm_config?.context_window,
     memoryBlocks: (agent.memory_blocks || []).map((b: any) => ({
       name: b.name,
@@ -130,6 +136,19 @@ async function computeAgentDiff(
       value: b.value || '',
       mutable: b.mutable
     })),
+    archives: (agent.archives || []).map((a: any) => {
+      const resolved: any = {
+        name: a.name,
+        description: a.description,
+        embedding_config: a.embedding_config,
+      };
+      if (a.embedding) {
+        resolved.embedding = a.embedding;
+      } else if (!a.embedding_config && agent.embedding) {
+        resolved.embedding = agent.embedding;
+      }
+      return resolved;
+    }),
     memoryBlockFileHashes,
     folders: (agent.folders || []).map((f: any) => ({
       name: f.name,
@@ -226,6 +245,9 @@ function formatCreateDetails(result: DryRunResult, fancy: boolean): void {
   if (result.config.memoryBlocks?.length) {
     output(`${indent}${dim('Memory blocks:')} ${result.config.memoryBlocks.length}`);
   }
+  if (result.config.archives?.length) {
+    output(`${indent}${dim('Archives:')} ${result.config.archives.length}`);
+  }
   if (result.config.folders?.length) {
     const fileCount = result.config.folders.reduce((sum: number, f: any) => sum + f.files.length, 0);
     output(`${indent}${dim('Folders:')} ${result.config.folders.length} (${fileCount} files)`);
@@ -309,6 +331,16 @@ function formatUpdateDetails(ops: AgentUpdateOperations, verbose: boolean, fancy
     }
     if (verbose && ops.folders.unchanged.length > 0) {
       output(`    ${dim(`Folders unchanged: ${ops.folders.unchanged.length}`)}`);
+    }
+  }
+
+  // Archive changes
+  if (ops.archives) {
+    for (const a of ops.archives.toAttach) output(`    Archive [+]: ${a.name}`);
+    for (const a of ops.archives.toDetach) output(`    Archive [-]: ${a.name} (requires --force)`);
+    for (const a of ops.archives.toUpdate) output(`    Archive [~]: ${a.name}`);
+    if (verbose && ops.archives.unchanged.length > 0) {
+      output(`    Archives unchanged: ${ops.archives.unchanged.length}`);
     }
   }
 }

@@ -5,4 +5,5 @@ export interface ApplyOptions {
   dryRun?: boolean;
   force?: boolean;
   root?: string;
+  manifest?: string;
 }

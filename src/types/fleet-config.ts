@@ -26,6 +26,7 @@ export interface SharedBlock {
   value?: string;
   from_file?: string;
   version?: string; // Optional user-defined version tag
+  mutable?: boolean; // Default: true. If false, value syncs from YAML on every apply
 }
 
 export interface AgentConfig {
@@ -34,12 +35,20 @@ export interface AgentConfig {
   system_prompt: PromptConfig;
   llm_config: LLMConfig;
   tools?: string[];
+  mcp_tools?: McpToolConfig[];
   shared_blocks?: string[];
   memory_blocks?: MemoryBlock[];
+  archives?: ArchiveConfig[];
   folders?: FolderConfig[];
   embedding?: string;
+  embedding_config?: Record<string, any>;
   first_message?: string; // Message sent to agent on first creation for auto-calibration
   reasoning?: boolean; // Enable reasoning for models that support it (default: true)
+}
+
+export interface McpToolConfig {
+  server: string;
+  tools?: string[] | 'all';
 }
 
 export interface ToolConfig {
@@ -78,6 +87,13 @@ export interface MemoryBlock {
   from_file?: string;
   version?: string; // Optional user-defined version tag
   mutable?: boolean; // Default: true. If false, value syncs from YAML on every apply
+}
+
+export interface ArchiveConfig {
+  name: string;
+  description?: string;
+  embedding?: string;
+  embedding_config?: Record<string, any>;
 }
 
 export interface LLMConfig {

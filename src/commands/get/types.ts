@@ -1,4 +1,4 @@
-export const SUPPORTED_RESOURCES = ['agents', 'blocks', 'tools', 'folders', 'files', 'mcp-servers', 'archival'];
+export const SUPPORTED_RESOURCES = ['agents', 'blocks', 'archives', 'tools', 'folders', 'files', 'mcp-servers', 'archival'];
 
 export interface GetOptions {
   output?: string;

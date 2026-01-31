@@ -11,6 +11,7 @@ import { describeTool } from './tool';
 import { describeFolder } from './folder';
 import { describeFile } from './file';
 import { describeMcpServer } from './mcp-server';
+import { describeArchive } from './archive';
 
 async function describeCommandImpl(resource: string, name: string, options?: DescribeOptions, command?: any) {
   const verbose = command?.parent?.opts().verbose || false;
@@ -30,6 +31,9 @@ async function describeCommandImpl(resource: string, name: string, options?: Des
       break;
     case 'block':
       await describeBlock(client, resolver, name, options, spinnerEnabled);
+      break;
+    case 'archive':
+      await describeArchive(client, resolver, name, options, spinnerEnabled);
       break;
     case 'tool':
       await describeTool(client, resolver, name, options, spinnerEnabled);

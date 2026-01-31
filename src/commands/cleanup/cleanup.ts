@@ -7,6 +7,7 @@ import { displayCleanupNote } from '../../lib/ux/display';
 import { SUPPORTED_RESOURCES, CleanupOptions } from './types';
 import { cleanupOrphanedBlocks } from './blocks';
 import { cleanupOrphanedFolders } from './folders';
+import { cleanupOrphanedArchives } from './archives';
 
 async function cleanupCommandImpl(
   resource: string,
@@ -40,6 +41,11 @@ async function cleanupCommandImpl(
 
   if (resource === 'folders' || resource === 'all') {
     const deleted = await cleanupOrphanedFolders(client, resolver, isDryRun, spinnerEnabled, verbose);
+    totalDeleted += deleted;
+  }
+
+  if (resource === 'archives' || resource === 'all') {
+    const deleted = await cleanupOrphanedArchives(client, resolver, isDryRun, spinnerEnabled, verbose);
     totalDeleted += deleted;
   }
 

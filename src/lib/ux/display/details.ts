@@ -35,6 +35,17 @@ export interface BlockDetailsData {
   agentCount?: number;
 }
 
+export interface ArchiveDetailsData {
+  id: string;
+  name: string;
+  description?: string;
+  embedding?: string;
+  vectorDbProvider?: string;
+  created?: string;
+  updated?: string;
+  attachedAgents?: { name: string; id: string }[];
+}
+
 export interface ToolDetailsData {
   id: string;
   name: string;
@@ -339,6 +350,68 @@ function displayBlockDetailsPlain(data: BlockDetailsData): string {
     lines.push(preview);
   } else {
     lines.push('  (empty)');
+  }
+
+  return lines.join('\n');
+}
+
+// ============================================================================
+// Archive Details
+// ============================================================================
+
+export function displayArchiveDetails(data: ArchiveDetailsData): string {
+  if (!shouldUseFancyUx()) {
+    return displayArchiveDetailsPlain(data);
+  }
+
+  const width = 70;
+  const lines: string[] = [];
+
+  const headerRows: BoxRow[] = [
+    { key: 'ID', value: data.id },
+    { key: 'Name', value: data.name },
+    { key: 'Description', value: data.description || '-' },
+    { key: 'Embedding', value: data.embedding || '-' },
+    { key: 'Vector DB', value: data.vectorDbProvider || '-' },
+    { key: 'Created', value: formatDate(data.created) },
+    { key: 'Updated', value: formatDate(data.updated) },
+  ];
+  lines.push(...createBox(`Archive: ${data.name}`, headerRows, width));
+
+  lines.push('');
+  if (data.attachedAgents && data.attachedAgents.length > 0) {
+    const agentRows = data.attachedAgents.map(a =>
+      chalk.white(a.name) + chalk.dim(` (${a.id})`)
+    );
+    lines.push(...createBoxWithRows(`Attached Agents (${data.attachedAgents.length})`, agentRows, width));
+  } else {
+    lines.push(...createBoxWithRows('Attached Agents (0)', [chalk.dim('(none - orphaned archive)')], width));
+  }
+
+  return lines.join('\n');
+}
+
+function displayArchiveDetailsPlain(data: ArchiveDetailsData): string {
+  const lines: string[] = [];
+
+  lines.push(`Archive Details: ${data.name}`);
+  lines.push('='.repeat(50));
+  lines.push(`ID:            ${data.id}`);
+  lines.push(`Name:          ${data.name || '-'}`);
+  lines.push(`Description:   ${data.description || '-'}`);
+  lines.push(`Embedding:     ${data.embedding || '-'}`);
+  lines.push(`Vector DB:     ${data.vectorDbProvider || '-'}`);
+  lines.push(`Created:       ${data.created || 'Unknown'}`);
+  lines.push(`Updated:       ${data.updated || 'Unknown'}`);
+
+  lines.push('');
+  lines.push(`Attached Agents (${data.attachedAgents?.length || 0}):`);
+  if (data.attachedAgents && data.attachedAgents.length > 0) {
+    for (const agent of data.attachedAgents) {
+      lines.push(`  - ${agent.name} (${agent.id})`);
+    }
+  } else {
+    lines.push('  (none - orphaned archive)');
   }
 
   return lines.join('\n');
