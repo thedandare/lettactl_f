@@ -124,6 +124,13 @@ export async function processFolders(
 ): Promise<Map<string, string>> {
   const createdFolders = new Map<string, string>();
 
+  // Check if any agent has folders configured
+  const hasFolders = config.agents.some((a: any) => a.folders && a.folders.length > 0);
+  if (!hasFolders) {
+    if (verbose) log('No folders configured, skipping folder processing');
+    return createdFolders;
+  }
+
   if (verbose) log('Processing folders...');
   const foldersResponse = await client.listFolders();
   const existingFolders = Array.isArray(foldersResponse) ? foldersResponse : (foldersResponse as any).items || [];

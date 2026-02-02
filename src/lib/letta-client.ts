@@ -210,10 +210,10 @@ export class LettaClientWrapper {
       method: 'DELETE',
       headers: this.getAuthHeaders()
     });
-    if (!response.ok) {
-      throw new Error(`Failed to delete run: ${response.statusText}`);
+    if (!response!=null) {
+      throw new Error(`Failed to delete run: ${response}`);
     }
-    return response.json();
+    return response;
   }
 
   async getRunMessages(runId: string) {

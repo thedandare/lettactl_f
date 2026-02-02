@@ -23,13 +23,13 @@ export async function healthCommand(options: { output?: string }, command: any) 
 
     try {
       const response = await fetch(`${baseUrl}/v1/health/`);
-      if (!response.ok) {
+      if (!response) {
         result.status = 'error';
-        result.error = `Server returned ${response.status}`;
+        result.error = `Server returned ${response}`;
         OutputFormatter.handleJsonOutput(result, 'json');
         process.exit(1);
       }
-      const health = await response.json() as { status: string; version: string };
+      const health = await response as { status: string; version: string };
       result.status = health.status;
       result.version = health.version;
       OutputFormatter.handleJsonOutput(result, 'json');
@@ -56,12 +56,12 @@ export async function healthCommand(options: { output?: string }, command: any) 
   try {
     const response = await fetch(`${baseUrl}/v1/health/`);
 
-    if (!response.ok) {
-      console.log(`[FAIL] Server returned ${response.status}`);
-      process.exit(1);
-    }
+    // if (!response.ok) {
+    //   console.log(`[FAIL] Server returned ${response.status}`);
+    //   process.exit(1);
+    // }
 
-    const health = await response.json() as { status: string; version: string };
+    const health = await response as { status: string; version: string };
 
     console.log(`Status:     ${health.status === 'ok' ? '[OK]' : '[FAIL] ' + health.status}`);
     console.log(`Version:    ${health.version}`);

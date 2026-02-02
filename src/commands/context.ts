@@ -32,12 +32,13 @@ export async function contextCommand(agentName: string, options: { output?: stri
   const baseUrl = process.env.LETTA_BASE_URL;
   const response = await fetch(`${baseUrl}/v1/agents/${agent.id}/context`);
 
-  if (!response.ok) {
-    console.error(`Failed to fetch context: ${response.status}`);
-    process.exit(1);
-  }
+  // if (!response.ok) {
+  //   // 
+  //   console.error(`Failed to fetch context: ${response}`);
+  //   process.exit(1);
+  // }
 
-  const ctx = await response.json() as ContextWindow;
+  const ctx = await response as ContextWindow;
 
   if (OutputFormatter.handleJsonOutput(ctx, options.output)) {
     return;

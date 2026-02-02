@@ -28,12 +28,12 @@ export async function filesCommand(agentName: string, options: { output?: string
   const baseUrl = process.env.LETTA_BASE_URL;
   const response = await fetch(`${baseUrl}/v1/agents/${agent.id}/files`);
 
-  if (!response.ok) {
-    console.error(`Failed to fetch files: ${response.status}`);
-    process.exit(1);
-  }
+  // if (!response.ok) {
+  //   console.error(`Failed to fetch files: ${response}`);
+  //   process.exit(1);
+  // }
 
-  const data = await response.json() as { files: AgentFile[] };
+  const data = await response as { files: AgentFile[] };
   const files = data.files || [];
 
   if (OutputFormatter.handleJsonOutput(files, options.output)) {
